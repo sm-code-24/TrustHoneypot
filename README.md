@@ -25,14 +25,14 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 │                                                          │
 │  ┌──────────┐  ┌──────────┐  ┌───────────┐  ┌────────┐ │
 │  │ Detector │  │  Agent   │  │ Extractor │  │Callback│ │
-│  │ 5-layer  │  │ 13 pools │  │ 8 types   │  │  GUVI  │ │
+│  │ 5-layer  │  │15+ pools │  │ 8 types   │  │  GUVI  │ │
 │  │ scoring  │  │ rotation │  │ regex+NLP │  │endpoint│ │
 │  └──────────┘  └──────┬───┘  └───────────┘  └────────┘ │
 │                       │                                  │
 │               ┌───────▼───────┐                          │
 │               │ LLM Rephraser │  (optional)              │
-│               │ Gemini 3 Flash│  timeout → fallback      │
-│               │   Preview     │                          │
+│               │ Gemini 2.0    │  timeout → fallback      │
+│               │   Flash       │                          │
 │               └───────────────┘                          │
 │                                                          │
 │               ┌───────────────┐                          │
@@ -58,9 +58,10 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 | **5-Layer Detection**       | Keyword → Pattern → India-specific → Behavioral → Confidence scoring                 |
 | **18+ Scam Types**          | Digital arrest, courier, KYC, UPI, lottery, investment, crypto, and more             |
 | **Bilingual (EN + HI)**     | Full Hindi/Hinglish support — detection, agent responses, and LLM rephrasing         |
-| **Adaptive Agent**          | 13 response pools × 2 languages (240+ phrases), intelligent rotation                 |
+| **Adaptive Agent**          | 15+ response pools × 2 languages (260+ phrases), context-aware rotation              |
 | **Intelligence Extraction** | UPI IDs, bank accounts, phones, Aadhaar, PAN, emails, phishing links, crypto wallets |
-| **LLM Enhancement**         | Optional Gemini 3 Flash Preview rephrasing with 1.4s timeout + auto-fallback         |
+| **LLM Enhancement**         | Optional Gemini 2.0 Flash rephrasing with 5s timeout + auto-fallback                 |
+| **10 Simulation Scenarios** | Bank, UPI, lottery, KYC, digital arrest, courier, investment, job, utility scams     |
 | **Live Callbacks**          | Automatic GUVI platform reporting when sufficient intel gathered                     |
 | **Dark / Light Theme**      | Full dark + light theme system with CSS custom properties & glassmorphism            |
 | **Production Ready**        | Rate limiting, request timing, session TTL cleanup, configurable CORS                |
@@ -96,9 +97,9 @@ Create a `.env` file in the project root:
 API_KEY=your-api-key-here
 CALLBACK_URL=https://your-guvi-callback-endpoint
 GEMINI_API_KEY=your-google-ai-key       # optional
-GEMINI_MODEL=gemini-3-flash-preview      # optional
+GEMINI_MODEL=gemini-2.0-flash            # optional
 MONGODB_URI=mongodb+srv://...            # optional
-LLM_TIMEOUT_MS=1400                      # optional
+LLM_TIMEOUT_MS=5000                      # optional
 ```
 
 Create `frontend/.env`:
@@ -108,14 +109,14 @@ VITE_API_URL=http://localhost:8000
 VITE_API_KEY=your-api-key-here
 ```
 
-| Variable         | Required | Description                                  |
-| ---------------- | -------- | -------------------------------------------- |
-| `API_KEY`        | Yes      | API key for auth (`x-api-key` header)        |
-| `CALLBACK_URL`   | Yes      | GUVI callback endpoint                       |
-| `GEMINI_API_KEY` | No       | Google AI API key (LLM phrasing)             |
-| `GEMINI_MODEL`   | No       | Model name (default: gemini-3-flash-preview) |
-| `MONGODB_URI`    | No       | MongoDB Atlas connection string              |
-| `LLM_TIMEOUT_MS` | No       | LLM timeout in ms (default: 1400)            |
+| Variable         | Required | Description                            |
+| ---------------- | -------- | -------------------------------------- |
+| `API_KEY`        | Yes      | API key for auth (`x-api-key` header)  |
+| `CALLBACK_URL`   | Yes      | GUVI callback endpoint                 |
+| `GEMINI_API_KEY` | No       | Google AI API key (LLM phrasing)       |
+| `GEMINI_MODEL`   | No       | Model name (default: gemini-2.0-flash) |
+| `MONGODB_URI`    | No       | MongoDB Atlas connection string        |
+| `LLM_TIMEOUT_MS` | No       | LLM timeout in ms (default: 5000)      |
 
 ### 3. Run Development
 
@@ -210,7 +211,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --app-dir app
 trusthoneypot/
 ├── app/
 │   ├── main.py          # FastAPI entry + all endpoints
-│   ├── agent.py         # Honeypot agent (13 response pools)
+│   ├── agent.py         # Honeypot agent (15+ response pools)
 │   ├── detector.py      # 5-layer scam detection engine
 │   ├── extractor.py     # Intelligence extraction (8 types)
 │   ├── llm.py           # Gemini Flash integration
@@ -240,7 +241,7 @@ trusthoneypot/
 | ---------- | ------------------------------------------------ |
 | Backend    | Python 3.13, FastAPI, Pydantic v2, Uvicorn       |
 | Frontend   | React 18, Vite 6, Tailwind CSS 3, React Router 6 |
-| LLM        | Google Gemini 3 Flash Preview (optional)         |
+| LLM        | Google Gemini 2.0 Flash (optional)               |
 | Database   | MongoDB Atlas (optional)                         |
 | Icons      | Lucide React                                     |
 | Deployment | Railway (API), Vercel (UI)                       |

@@ -81,8 +81,8 @@ class LLMService:
     
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY", "")
-        self.timeout_ms = int(os.getenv("LLM_TIMEOUT_MS", "3000"))
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
+        self.timeout_ms = int(os.getenv("LLM_TIMEOUT_MS", "5000"))  # Increased timeout
+        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.0-flash")  # Valid model name
         self.enabled = False
         self.client = None
         self._configure()

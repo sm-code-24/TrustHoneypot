@@ -43,7 +43,7 @@ const TECH_STACK = [
     items: [
       {
         name: "Google Gemini",
-        desc: "gemini-3-flash-preview model for bilingual (EN/HI) reply rephrasing",
+        desc: "gemini-2.0-flash model for bilingual (EN/HI) reply rephrasing",
       },
       {
         name: "google-genai SDK",
@@ -54,8 +54,8 @@ const TECH_STACK = [
         desc: "Primary detection authority — LLM never overrides rules",
       },
       {
-        name: "240+ Response Pools",
-        desc: "Bilingual (English + Hindi) category-specific templates across 13 pools",
+        name: "260+ Response Templates",
+        desc: "Bilingual (English + Hindi) category-specific templates across 15+ pools",
       },
     ],
   },

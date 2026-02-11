@@ -67,7 +67,7 @@ const STATS = [
   { label: "Scam Categories", value: "18+" },
   { label: "Detection Layers", value: "5" },
   { label: "Intel Extractors", value: "8" },
-  { label: "Response Pools", value: "240+" },
+  { label: "Response Pools", value: "260+" },
 ];
 
 export default function Landing() {

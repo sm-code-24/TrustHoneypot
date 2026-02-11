@@ -333,11 +333,10 @@ class HoneypotAgent:
         "Haan ji, I have opened my banking app. I am ready. What is the next instruction?",
     ]
     
-    # Technical confusion responses (very believable for elderly persona)
-    TECH_CONFUSION_RESPONSES = [
+    # UPI/Banking technical confusion (for payment/refund scams)
+    UPI_TECH_CONFUSION_RESPONSES = [
         "Google Pay is showing some error. Can I do by NEFT instead?",
         "How to check my bank balance? Let me open the app... it's asking for fingerprint...",
-        "I don't know how to do screen share. My camera is not working properly.",
         "Sir the app is showing 'insufficient balance'. I need to transfer from FD first.",
         "Wait, which app to open? I have Paytm, PhonePe, and BHIM all three.",
         "My phone is very slow. Let me restart the app once.",
@@ -346,11 +345,49 @@ class HoneypotAgent:
         "Transaction failed it says. Maybe my daily limit is over. Let me try from other bank.",
         "Where is the scan option? My granddaughter usually helps me with all this.",
         "PhonePe is asking me to update first. It says 28 MB download. My data is low.",
-        "Sir how do I do screen recording? You said send recording but I don't know how.",
         "My internet banking password is locked sir. I tried too many times. Need to reset.",
         "It's showing 'beneficiary not registered'. How to add beneficiary? I never done this before.",
-        "Camera is showing my ceiling sir. How do I flip it? Where is the button?",
+        "Sir the transaction is pending. It shows 'processing'. Should I wait or cancel?",
+        "My bank app is asking for face verification. But it's not recognizing me with spectacles!",
+        "Which UPI ID to send to? Please spell it slowly, I am typing...",
+        "Google Pay shows '2 hour cooldown'. What to do now?",
+        "Sir I don't have enough balance. Can I send half now and half tomorrow?",
+        "IFSC code? Is that written on cheque book? Let me find it...",
     ]
+    
+    HINDI_UPI_TECH_CONFUSION_RESPONSES = [
+        "Google Pay mein error aa raha hai. NEFT se kar doon?",
+        "Bank balance kaise check karun? App khola, fingerprint maang raha hai...",
+        "App bol raha hai 'insufficient balance'. FD se transfer karna padega pehle.",
+        "Kaun sa app kholuun? Paytm, PhonePe, BHIM - teeno hain mere paas.",
+        "Phone bahut slow hai. Ek baar app restart karun?",
+        "Screen freeze ho gaya. Button daba raha hoon, ruko...",
+        "UPI pin? Ye ATM pin jaisa hai? Main hamesha confuse ho jaata hoon.",
+        "Transaction failed bol raha hai. Daily limit khatam hogi. Doosre bank se try karun?",
+        "Scan option kahan hai? Meri poti khaali karne mein help karti hai.",
+        "PhonePe update maang raha hai. 28 MB download hai. Data kam hai.",
+        "Internet banking password lock ho gaya sir. Bahut baar try kiya. Reset karna padega.",
+        "Beneficiary not registered bol raha hai. Kaise add karun? Kabhi kiya nahi.",
+        "Sir transaction pending dikh raha hai. Wait karun ya cancel?",
+        "IFSC code? Wo cheque book pe hota hai na? Dhundhta hoon...",
+    ]
+    
+    # Video call technical confusion (for digital arrest/video scams)
+    VIDEO_TECH_CONFUSION_RESPONSES = [
+        "Camera is showing my ceiling sir. How do I flip it? Where is the button?",
+        "I don't know how to do screen share. My camera is not working properly.",
+        "Sir how do I do screen recording? You said send recording but I don't know how.",
+        "Video quality is very poor sir. My internet is 2G only in this area.",
+        "Sir I can see you but can you see me? My face is showing or not?",
+        "How to mute myself? There is background noise from TV.",
+        "Sir the call is disconnecting again and again. Network issue.",
+        "My front camera is broken sir. Only back camera works. I am holding phone up.",
+        "Should I download Zoom or you will call on WhatsApp video?",
+        "Sir my wife is walking behind me. Should I send her to other room?",
+    ]
+    
+    # Legacy alias (for backward compatibility)
+    TECH_CONFUSION_RESPONSES = UPI_TECH_CONFUSION_RESPONSES
     
     # OTP specific responses - when they ask for OTP directly
     OTP_RESPONSES = [
@@ -503,17 +540,18 @@ class HoneypotAgent:
         "Main maafi maangta hoon itne sawaal puchhe. Ab bass bataiye aur main karunga.",
     ]
     
+    # Legacy Hindi tech confusion (UPI/banking focused, no video)
     HINDI_TECH_CONFUSION_RESPONSES = [
         "Google Pay mein kuch error aa raha hai. NEFT se kar doon?",
         "Bank balance kaise check karun? App khola hai... fingerprint maang raha hai...",
-        "Screen share kaise karte hain? Mera camera theek se kaam nahi karta.",
         "App bol raha hai 'insufficient balance'. FD se transfer karna padega pehle.",
         "Kaun sa app kholuun? Paytm, PhonePe, BHIM - teeno hain mere paas.",
         "Phone bahut slow hai. Ek baar restart karun? Ruko.",
         "UPI pin? Ye wahi hai jo ATM pin hai? Main hamesha confuse ho jaata hoon.",
         "Transaction failed bol raha hai. Shayad daily limit khatam ho gayi. Doosre bank se try karun?",
-        "Scan kahan hai? Meri poti khaali karne mein help karti hai ye sab.",
+        "Scan kahan hai? Meri poti help karti hai ye sab.",
         "PhonePe update maang raha hai pehle. 28 MB download. Mera data kam hai.",
+        "Sir transaction pending dikh raha hai. Wait karun ya cancel?",
     ]
     
     HINDI_OTP_RESPONSES = [
@@ -630,6 +668,8 @@ class HoneypotAgent:
                 "agent_confidence": 0.0,  # How sure agent is it's a scam (affects tone, NOT detection)
                 "language": "en",  # Detected language for this session
                 "_history_processed_count": 0,  # Track processed history to avoid duplicates
+                "scam_type": None,  # Track the TYPE of scam for context consistency
+                "threat_count": 0,  # Number of actual threat messages received
             }
         return self.session_context[session_id]
     
@@ -729,102 +769,171 @@ class HoneypotAgent:
         }
         return clean in short_words or len(clean.split()) <= 2
     
+    def _detect_scam_type(self, tactics: list) -> str:
+        """Determine the type of scam based on detected tactics."""
+        if "digital_arrest" in tactics:
+            return "digital_arrest"
+        elif "courier" in tactics:
+            return "courier_scam"
+        elif "payment_lure" in tactics:
+            return "refund_scam"  # Prize/refund/cashback scams
+        elif "threat" in tactics:
+            return "intimidation_scam"
+        elif "verification" in tactics or "impersonation" in tactics:
+            return "bank_impersonation"
+        elif "payment_request" in tactics:
+            return "payment_scam"
+        elif "otp_request" in tactics or "credential" in tactics:
+            return "credential_theft"
+        return "unknown"
+    
     def generate_response(self, session_id: str, scammer_message: str, message_count: int) -> str:
         """
-        Generate a believable human response.
+        Generate a believable human response with proper context awareness.
         
-        The response depends on:
-        - How many messages we've exchanged
-        - What tactics the scammer is using
-        - What we've already said (to avoid repetition)
-        - Conversation escalation level (adapts dynamically)
-        - Previous context from conversation history
-        - Specific scam type detected
-        - Language of scammer message (English or Hindi/Hinglish)
+        Key principles:
+        1. Track scam TYPE and respond consistently with that context
+        2. Only show fear when there are ACTUAL threats
+        3. Use appropriate tech confusion (UPI vs video) based on scam type
+        4. Gradual emotional progression, not random jumps
         """
         context = self._get_context(session_id)
         tactics = self._detect_tactics(scammer_message)
         context["detected_tactics"].update(tactics)
         
+        # Detect and lock scam type once identified
+        if context.get("scam_type") is None and tactics:
+            detected_type = self._detect_scam_type(tactics)
+            if detected_type != "unknown":
+                context["scam_type"] = detected_type
+                logger.debug(f"[AGENT] [{session_id[:8]}] Scam type locked: {detected_type}")
+        
+        scam_type = context.get("scam_type", "unknown")
+        
         # Detect language preference
         lang = self._detect_language(scammer_message)
-        context["language"] = lang  # Store for session consistency
+        context["language"] = lang
         
         # Track last tactic for continuity
         if tactics:
             context["last_tactic"] = tactics[-1]
         
-        # Track previous escalation level for guard logic
+        # Track actual threat count (for FEARFUL response gate)
+        if "threat" in tactics:
+            context["threat_count"] = context.get("threat_count", 0) + 1
+        
+        # Determine escalation based on message progression, NOT just tactics
+        # This prevents jumping from calm to fearful instantly
         prev_escalation = context.get("escalation_level", 0)
         
-        # Gradual escalation update based on current message
-        # Prevents jumping from calm to fearful instantly
-        if "threat" in tactics or "digital_arrest" in tactics:
-            # Threats escalate faster but still cap at +2 from current level
-            new_level = min(3, prev_escalation + 2)
-            context["escalation_level"] = max(context["escalation_level"], new_level)
+        if "threat" in tactics and context["threat_count"] >= 2:
+            # Only escalate to fearful after 2+ threat messages
+            context["escalation_level"] = min(3, prev_escalation + 1)
         elif "payment_request" in tactics:
-            context["escalation_level"] = max(context["escalation_level"], min(prev_escalation + 1, 2))
-        elif tactics:
-            context["escalation_level"] = max(context["escalation_level"], 1)
+            context["escalation_level"] = max(prev_escalation, min(2, prev_escalation + 1))
+        elif tactics and prev_escalation < 1:
+            context["escalation_level"] = 1
         
         escalation = context["escalation_level"]
         
-        # Handle short/vague messages - use follow-up responses to continue conversation
+        # ─── RESPONSE SELECTION WITH CONTEXT AWARENESS ───────────────────────
+        
+        # 1. SHORT MESSAGES - follow-up to continue conversation
         if self._is_short_message(scammer_message) and message_count > 1:
             pool = self.HINDI_SHORT_FOLLOWUP_RESPONSES if lang == "hi" else self.SHORT_FOLLOWUP_RESPONSES
-        # When scammer confirms/insists after our doubt - show cautious acceptance
+        
+        # 2. SCAMMER CONFIRMS after our doubt
         elif "confirmation_insist" in tactics and message_count > 1:
             pool = self.HINDI_CONFIRMATION_DOUBT_RESPONSES if lang == "hi" else self.CONFIRMATION_DOUBT_RESPONSES
-        # Dynamic response selection based on context, scam type, and language
+        
+        # 3. FIRST MESSAGE - initial confusion
         elif message_count <= 1:
             pool = self.HINDI_INITIAL_RESPONSES if lang == "hi" else self.INITIAL_RESPONSES
-        elif "digital_arrest" in tactics:
-            pool = self.HINDI_DIGITAL_ARREST_RESPONSES if lang == "hi" else self.DIGITAL_ARREST_RESPONSES
-        elif "courier" in tactics:
+        
+        # 4. SCAM-TYPE SPECIFIC RESPONSES ─────────────────────────────────────
+        
+        # Digital arrest scam (video call based)
+        elif scam_type == "digital_arrest" or "digital_arrest" in tactics:
+            if "credential" in tactics or message_count > 4:
+                pool = self.VIDEO_TECH_CONFUSION_RESPONSES  # Video-specific tech issues
+            else:
+                pool = self.HINDI_DIGITAL_ARREST_RESPONSES if lang == "hi" else self.DIGITAL_ARREST_RESPONSES
+        
+        # Courier/parcel scam
+        elif scam_type == "courier_scam" or "courier" in tactics:
             pool = self.HINDI_COURIER_RESPONSES if lang == "hi" else self.COURIER_RESPONSES
-        elif "otp_request" in tactics:
-            pool = self.HINDI_OTP_RESPONSES if lang == "hi" else self.OTP_RESPONSES
-        elif "account_request" in tactics:
-            pool = self.ACCOUNT_NUMBER_RESPONSES  # Already has Hindi mixed in
-        elif "credential" in tactics:
-            pool = self.HINDI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.TECH_CONFUSION_RESPONSES
-        elif escalation >= 3 and "threat" in tactics:
-            # Only show fearful if we were already at escalation 2+ OR threats are repeated
-            if prev_escalation >= 2 or len([t for t in context.get("conversation_history", []) if "threat" in str(t)]) > 1:
+        
+        # Refund/prize/cashback scam
+        elif scam_type == "refund_scam" or "payment_lure" in tactics:
+            if "otp_request" in tactics:
+                pool = self.HINDI_OTP_RESPONSES if lang == "hi" else self.OTP_RESPONSES
+            elif "payment_request" in tactics or "credential" in tactics:
+                # They're asking for payment details - show tech confusion OR ask for details
+                if message_count > 3:
+                    pool = self.HINDI_UPI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.UPI_TECH_CONFUSION_RESPONSES
+                else:
+                    pool = self.HINDI_DETAIL_SEEKING if lang == "hi" else self.DETAIL_SEEKING
+                    context["intel_requested"] = True
+            else:
+                # Still explaining the "refund" - be skeptical but interested
+                pool = self.HINDI_PAYMENT_RESPONSES if lang == "hi" else self.PAYMENT_RESPONSES
+        
+        # Bank impersonation scam
+        elif scam_type == "bank_impersonation" or "verification" in tactics or "impersonation" in tactics:
+            if "otp_request" in tactics:
+                pool = self.HINDI_OTP_RESPONSES if lang == "hi" else self.OTP_RESPONSES
+            elif "account_request" in tactics:
+                pool = self.ACCOUNT_NUMBER_RESPONSES
+            elif "credential" in tactics or message_count > 4:
+                pool = self.HINDI_UPI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.UPI_TECH_CONFUSION_RESPONSES
+            else:
+                pool = self.HINDI_VERIFICATION_RESPONSES if lang == "hi" else self.VERIFICATION_RESPONSES
+        
+        # 5. THREAT HANDLING - only FEARFUL if multiple threats received
+        elif "threat" in tactics:
+            if context["threat_count"] >= 2 and escalation >= 2:
+                # Multiple threats - show fear and compliance
                 if message_count > 4 and random.random() > 0.4:
                     pool = self.HINDI_COMPLIANT_RESPONSES if lang == "hi" else self.COMPLIANT_RESPONSES
                 else:
                     pool = self.HINDI_FEARFUL_RESPONSES if lang == "hi" else self.FEARFUL_RESPONSES
             else:
-                # First threat - show concern but not full fear
+                # First threat - show concern but verify
                 pool = self.HINDI_VERIFICATION_RESPONSES if lang == "hi" else self.VERIFICATION_RESPONSES
-        elif context["intel_requested"] or message_count > 5:
-            if random.random() > 0.5:
-                pool = self.HINDI_DETAIL_SEEKING if lang == "hi" else self.DETAIL_SEEKING
+        
+        # 6. CREDENTIAL/OTP REQUESTS
+        elif "otp_request" in tactics:
+            pool = self.HINDI_OTP_RESPONSES if lang == "hi" else self.OTP_RESPONSES
+        elif "account_request" in tactics:
+            pool = self.ACCOUNT_NUMBER_RESPONSES
+        elif "credential" in tactics:
+            pool = self.HINDI_UPI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.UPI_TECH_CONFUSION_RESPONSES
+        
+        # 7. PAYMENT REQUEST - ask for details or show tech confusion
+        elif "payment_request" in tactics:
+            if context.get("intel_requested") and message_count > 3:
+                pool = self.HINDI_UPI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.UPI_TECH_CONFUSION_RESPONSES
             else:
-                pool = self.HINDI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.TECH_CONFUSION_RESPONSES
-        elif "payment_request" in tactics or escalation >= 2:
-            pool = self.HINDI_DETAIL_SEEKING if lang == "hi" else self.DETAIL_SEEKING
-            context["intel_requested"] = True
-        elif "payment_lure" in tactics:
-            pool = self.HINDI_PAYMENT_RESPONSES if lang == "hi" else self.PAYMENT_RESPONSES
-        elif "verification" in tactics or "impersonation" in tactics or "security_alert" in tactics:
-            pool = self.HINDI_VERIFICATION_RESPONSES if lang == "hi" else self.VERIFICATION_RESPONSES
-        elif "urgency" in tactics and escalation >= 1:
+                pool = self.HINDI_DETAIL_SEEKING if lang == "hi" else self.DETAIL_SEEKING
+                context["intel_requested"] = True
+        
+        # 8. URGENCY - stall for time
+        elif "urgency" in tactics:
             pool = self.HINDI_STALLING_RESPONSES if lang == "hi" else self.STALLING_RESPONSES
+        
+        # 9. DEFAULT - mild stalling/confusion based on conversation stage
         else:
-            # Default: mild confusion and stalling
-            if random.random() > 0.5:
+            if message_count > 5 and context.get("intel_requested"):
+                pool = self.HINDI_UPI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.UPI_TECH_CONFUSION_RESPONSES
+            elif message_count > 3:
                 pool = self.HINDI_STALLING_RESPONSES if lang == "hi" else self.STALLING_RESPONSES
             else:
                 pool = self.HINDI_VERIFICATION_RESPONSES if lang == "hi" else self.VERIFICATION_RESPONSES
         
-        # Smart rotation: avoid repeating recent responses from any pool
-        recent = context["responses_given"][-6:]  # Track last 6
+        # ─── SMART ROTATION ──────────────────────────────────────────────────
+        recent = context["responses_given"][-6:]
         available = [r for r in pool if r not in recent]
         if not available:
-            # All recently used — pick least-recently-used half
             half = len(pool) // 2 or 1
             oldest = context["responses_given"][:-half] if len(context["responses_given"]) > half else []
             available = [r for r in pool if r not in oldest[-3:]] or pool
@@ -832,11 +941,12 @@ class HoneypotAgent:
         response = random.choice(available)
         context["responses_given"].append(response)
         
-        # Add hesitation and probing for realism
+        # Add hesitation and probing for realism (reduced frequency for better flow)
         response = self._add_hesitation(response, lang)
-        response = self._add_probing(response, context, lang)
+        if message_count >= 3:
+            response = self._add_probing(response, context, lang)
         
-        # Update agent confidence based on tactics seen
+        # Update agent confidence
         self._update_confidence(context)
         
         # Add to conversation history
