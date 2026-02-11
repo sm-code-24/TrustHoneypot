@@ -5,6 +5,11 @@
 
 An agentic honeypot that **engages scammers** with believable human-like conversations, **extracts financial intelligence** (UPI IDs, bank accounts, phone numbers, Aadhaar, PAN, phishing links), and **reports findings** via automated callbacks — all in real-time.
 
+**Live Demo:**
+
+- Frontend: [https://trusthoneypot.tech](https://trusthoneypot.tech)
+- Backend API: [https://trusthoneypot-api.up.railway.app](https://trusthoneypot-api.up.railway.app)
+
 ---
 
 ## Architecture at a Glance
@@ -52,11 +57,13 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 | --------------------------- | ------------------------------------------------------------------------------------ |
 | **5-Layer Detection**       | Keyword → Pattern → India-specific → Behavioral → Confidence scoring                 |
 | **18+ Scam Types**          | Digital arrest, courier, KYC, UPI, lottery, investment, crypto, and more             |
-| **Adaptive Agent**          | 13 response pools (120+ phrases), intelligent rotation to avoid repetition           |
+| **Bilingual (EN + HI)**     | Full Hindi/Hinglish support — detection, agent responses, and LLM rephrasing         |
+| **Adaptive Agent**          | 13 response pools × 2 languages (240+ phrases), intelligent rotation                 |
 | **Intelligence Extraction** | UPI IDs, bank accounts, phones, Aadhaar, PAN, emails, phishing links, crypto wallets |
 | **LLM Enhancement**         | Optional Gemini 3 Flash Preview rephrasing with 1.4s timeout + auto-fallback         |
 | **Live Callbacks**          | Automatic GUVI platform reporting when sufficient intel gathered                     |
 | **Dark / Light Theme**      | Full dark + light theme system with CSS custom properties & glassmorphism            |
+| **Production Ready**        | Rate limiting, request timing, session TTL cleanup, configurable CORS                |
 | **Responsive Design**       | Mobile-first with hamburger menu, works on all screen sizes                          |
 
 ---
@@ -113,11 +120,12 @@ VITE_API_KEY=your-api-key-here
 ### 3. Run Development
 
 ```bash
-# Terminal 1 — Backend
-uvicorn app.main:app --reload --port 8000
+# Both at once (recommended)
+npm run dev
 
-# Terminal 2 — Frontend
-cd frontend && npm run dev
+# Or separately:
+npm run dev:backend   # Backend on :8000
+npm run dev:frontend  # Frontend on :5173
 ```
 
 Open **http://localhost:5173** in your browser.
@@ -125,8 +133,8 @@ Open **http://localhost:5173** in your browser.
 ### 4. Production Build
 
 ```bash
-cd frontend && npm run build   # outputs to frontend/dist/
-uvicorn app.main:app --host 0.0.0.0 --port 8000
+cd frontend && npm install && npm run build   # outputs to frontend/dist/
+uvicorn main:app --host 0.0.0.0 --port 8000 --app-dir app
 ```
 
 ---
@@ -178,15 +186,21 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ### Backend → Railway
 
+**Live:** [https://trusthoneypot-api.up.railway.app](https://trusthoneypot-api.up.railway.app)
+
 1. Connect your GitHub repo to [Railway](https://railway.app)
-2. Set environment variables in Railway dashboard
-3. Railway auto-detects `Procfile` and deploys
+2. Set environment variables in Railway dashboard (`API_KEY`, `GEMINI_API_KEY`, `MONGODB_URI`, etc.)
+3. Nixpacks auto-detects Python via `nixpacks.toml` and deploys with `uvicorn --app-dir app`
+4. Watch patterns: `app/**`, `requirements.txt`, `nixpacks.toml`, `railway.json`
 
 ### Frontend → Vercel
 
+**Live:** [https://trusthoneypot.tech](https://trusthoneypot.tech)
+
 1. Import `frontend/` folder to [Vercel](https://vercel.com)
-2. Set `VITE_API_URL` to your Railway backend URL
+2. Set `VITE_API_URL=https://trusthoneypot-api.up.railway.app` and `VITE_API_KEY` in Vercel environment variables
 3. Vercel auto-detects Vite and deploys
+4. Custom domain: `trusthoneypot.tech`
 
 ---
 
@@ -212,10 +226,9 @@ trusthoneypot/
 │   └── package.json
 ├── docs/
 │   └── TECHNICAL_DETAILS.md
-├── requirements.txt
-├── Procfile             # Railway / Heroku
-├── railway.json         # Railway config
-├── .env.example
+├── requirements.txt     # Python dependencies
+├── nixpacks.toml        # Railway Nixpacks config
+├── railway.json         # Railway deploy config
 └── README.md
 ```
 
@@ -238,4 +251,4 @@ trusthoneypot/
 
 MIT — Built with purpose for the India AI Impact Buildathon 2025.
 
-**© 2025 200 Hustlers — TrustHoneypot**
+**© 2025–2026 200 Hustlers — TrustHoneypot**

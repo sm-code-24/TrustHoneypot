@@ -56,7 +56,8 @@ app = FastAPI(
 )
 
 # CORS — restrict in production, wide open in dev
-_allowed_origins = os.getenv("CORS_ORIGINS", "*").split(",")
+_default_origins = "https://trusthoneypot.tech,https://www.trusthoneypot.tech,http://localhost:5173,http://localhost:3000"
+_allowed_origins = os.getenv("CORS_ORIGINS", _default_origins).split(",")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,

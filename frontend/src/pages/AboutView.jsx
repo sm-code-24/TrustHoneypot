@@ -51,7 +51,7 @@ const SOLUTION_HIGHLIGHTS = [
   {
     icon: Brain,
     title: "Agentic AI Engagement",
-    desc: "An adaptive conversational agent that role-plays as a convincing victim, using 120+ category-specific response templates with optional Gemini LLM rephrasing for maximum realism.",
+    desc: "An adaptive bilingual (English + Hindi) agent that role-plays as a convincing victim, using 240+ category-specific response templates with optional Gemini LLM rephrasing for maximum realism.",
     color: "from-purple-500 to-pink-400",
   },
   {
@@ -248,7 +248,7 @@ export default function AboutView() {
             { value: "18+", label: "Scam Categories" },
             { value: "5", label: "Detection Layers" },
             { value: "8", label: "Intel Extractors" },
-            { value: "120+", label: "Response Templates" },
+            { value: "240+", label: "Response Templates" },
           ].map((stat) => (
             <div key={stat.label}>
               <div className="text-2xl md:text-3xl font-extrabold text-gradient">

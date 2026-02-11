@@ -67,7 +67,7 @@ const STATS = [
   { label: "Scam Categories", value: "18+" },
   { label: "Detection Layers", value: "5" },
   { label: "Intel Extractors", value: "8" },
-  { label: "Response Pools", value: "120+" },
+  { label: "Response Pools", value: "240+" },
 ];
 
 export default function Landing() {
@@ -240,7 +240,7 @@ export default function Landing() {
             />
           </button>
           <a
-            href="https://github.com"
+            href="https://github.com/sm-code-24/TrustHoneypot"
             target="_blank"
             rel="noreferrer"
             className="flex items-center gap-2 rounded-xl backdrop-blur-sm px-6 py-3.5 text-sm font-medium transition-all"

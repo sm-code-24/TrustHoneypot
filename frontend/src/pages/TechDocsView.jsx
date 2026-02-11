@@ -43,7 +43,7 @@ const TECH_STACK = [
     items: [
       {
         name: "Google Gemini",
-        desc: "gemini-2.0-flash model for realistic reply rephrasing",
+        desc: "gemini-3-flash-preview model for bilingual (EN/HI) reply rephrasing",
       },
       {
         name: "google-genai SDK",
@@ -54,8 +54,8 @@ const TECH_STACK = [
         desc: "Primary detection authority — LLM never overrides rules",
       },
       {
-        name: "120+ Response Pools",
-        desc: "Category-specific templates that the AI agent draws from",
+        name: "240+ Response Pools",
+        desc: "Bilingual (English + Hindi) category-specific templates across 13 pools",
       },
     ],
   },
@@ -480,14 +480,14 @@ export default function TechDocsView() {
               title: "Backend API",
               platform: "Railway",
               details:
-                "FastAPI + Uvicorn, auto-deploy from main branch, environment variables managed via Railway dashboard.",
+                "FastAPI + Uvicorn at trusthoneypot-api.up.railway.app — Nixpacks Python provider, rate limiting, request timing, session TTL cleanup.",
               color: "from-blue-500 to-cyan-400",
             },
             {
               title: "Frontend UI",
               platform: "Vercel",
               details:
-                "React + Vite static build, edge CDN distribution, SPA rewrites configured via vercel.json.",
+                "React + Vite at trusthoneypot.tech — edge CDN, SPA rewrites, dark/light theme, bilingual UI.",
               color: "from-purple-500 to-pink-400",
             },
             {
