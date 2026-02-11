@@ -56,7 +56,14 @@ class ScamDetector:
         "within 24 hours": 18, "deadline": 12, "final notice": 20,
         "time sensitive": 15, "running out": 12, "expires today": 20,
         "hours left": 15, "minutes left": 18, "closing soon": 15,
-        "jaldi karo": 12, "abhi karo": 10, "turant": 15  # Hindi urgency words
+        # Hindi urgency
+        "jaldi karo": 12, "abhi karo": 10, "turant": 15,
+        "jaldi": 10, "abhi": 8, "fauran": 12, "fatafat": 10,
+        "der mat karo": 12, "waqt nahi hai": 15, "samay nahi hai": 15,
+        "jald se jald": 15, "aaj hi": 12, "abhi ke abhi": 18,
+        "rukiye mat": 10, "turat karo": 15, "jaldi kijiye": 12,
+        "time khatam": 15, "akhri mauka": 18, "akhri chance": 18,
+        "band ho jayega": 15, "expire ho jayega": 15,
     }
     
     # Account/verification scams - pretending to be your bank
@@ -69,7 +76,13 @@ class ScamDetector:
         "verification required": 20, "verify immediately": 25,
         "re-kyc": 20, "kyc update": 18, "kyc expired": 22,
         "ekyc": 15, "video kyc": 18, "complete kyc": 18,
-        "link aadhaar": 20, "link pan": 18, "update aadhaar": 18
+        "link aadhaar": 20, "link pan": 18, "update aadhaar": 18,
+        # Hindi verification
+        "khata band": 22, "account band": 22, "account band ho gaya": 25,
+        "khata suspend": 22, "khata block": 22, "verify karo": 12,
+        "verify karein": 12, "update karein": 10, "kyc karwao": 18,
+        "kyc karo": 18, "khata band ho jayega": 25,
+        "aadhaar link karo": 20, "pan link karo": 18,
     }
     
     # Money-related scams - lottery, refunds, prizes
@@ -84,7 +97,14 @@ class ScamDetector:
         "claim your": 18, "collect your": 15, "tax refund": 22,
         "income tax refund": 25, "gst refund": 22, "excess payment": 18,
         "double your money": 30, "guaranteed returns": 28, "investment scheme": 20,
-        "crypto": 15, "bitcoin": 15, "trading profit": 22
+        "crypto": 15, "bitcoin": 15, "trading profit": 22,
+        # Hindi payment
+        "paisa bhejo": 18, "paise bhejo": 18, "paise transfer karo": 20,
+        "inaam": 20, "inam": 20, "lottery jeete": 25, "lottery nikli": 25,
+        "cashback milega": 18, "refund aa raha": 20, "refund milega": 20,
+        "paise wapas": 18, "paise katenge": 18, "processing fees": 20,
+        "registration fees": 22, "jurmana": 18, "bhar do": 12,
+        "raqam bhejo": 18, "paisa de do": 18, "bhariye": 12,
     }
     
     # Threats and intimidation - creating fear
@@ -97,7 +117,18 @@ class ScamDetector:
         "cbi case": 25, "enforcement directorate": 25, "e.d. case": 22,
         "money laundering case": 28, "hawala": 25, "terror funding": 30,
         "your name is involved": 22, "case registered against": 22,
-        "digital arrest": 28, "video call arrest": 30
+        "digital arrest": 28, "video call arrest": 30,
+        # Hindi threats
+        "giraftar": 25, "giraftaar": 25, "arrest hoga": 25,
+        "jail bhejenge": 25, "jail hogi": 25, "jail jayenge": 25,
+        "case darj": 22, "case darj hoga": 25, "fir hogi": 22,
+        "police bhejenge": 22, "police aa rahi hai": 25,
+        "kanuni karwahi": 25, "kanooni karwai": 25,
+        "muqadma": 22, "court mein": 20, "court ka notice": 22,
+        "jurmana lagega": 18, "saza hogi": 22, "pakad lenge": 22,
+        "warrant nikla hai": 25, "summon aaya hai": 22,
+        "jaanch ho rahi hai": 18, "investigate ho raha": 18,
+        "naam shamil hai": 22, "ghar pe aayenge": 22,
     }
     
     # =========================================================================
@@ -115,7 +146,13 @@ class ScamDetector:
         "pmo": 25, "prime minister office": 25, "cm office": 22,
         "police commissioner": 22, "dgp": 22, "ips officer": 22,
         "central government": 20, "state government": 18,
-        "pradhan mantri": 20, "pm scheme": 18, "govt scheme": 18
+        "pradhan mantri": 20, "pm scheme": 18, "govt scheme": 18,
+        # Hindi govt impersonation
+        "sarkar": 15, "sarkari": 15, "bharat sarkar": 20,
+        "kendriya": 18, "mantralaya": 18,
+        "police thana": 20, "thana": 15, "daroga": 18,
+        "adhikari": 15, "inspector": 15, "sahab": 10,
+        "sarkari yojana": 18, "vikas yojana": 15,
     }
     
     # Aadhaar/PAN specific scams - huge in India
@@ -128,7 +165,12 @@ class ScamDetector:
         "aadhaar number used": 22, "pan number misused": 22,
         "multiple pan": 22, "duplicate aadhaar": 22,
         "aadhaar verification": 20, "pan verification": 18,
-        "12 digit": 12, "10 digit pan": 12
+        "12 digit": 12, "10 digit pan": 12,
+        # Hindi identity
+        "aadhaar band": 25, "aadhaar block": 25,
+        "pan band": 22, "pan block": 22,
+        "aadhaar ka galat istemal": 28, "pan ka galat istemal": 25,
+        "aadhaar link karo": 22, "pehchaan patra": 15,
     }
     
     # Telecom/SIM scams - very prevalent
@@ -138,7 +180,11 @@ class ScamDetector:
         "your number used for fraud": 25, "trai notice": 22,
         "telecom violation": 22, "sim verification": 18,
         "port your number": 15, "airtel": 10, "jio": 10, "vi": 10,
-        "bsnl": 10, "mobile number linked": 15
+        "bsnl": 10, "mobile number linked": 15,
+        # Hindi telecom
+        "sim band hoga": 22, "sim band ho jayega": 25,
+        "number band": 22, "number block": 22,
+        "number se fraud hua": 28, "number ka galat istemal": 25,
     }
     
     # Courier/delivery scams
@@ -147,7 +193,11 @@ class ScamDetector:
         "parcel seized": 25, "drugs found": 30, "illegal items": 28,
         "customs duty": 22, "package held": 20, "delivery failed": 15,
         "address verification": 18, "fedex": 12, "dhl": 12,
-        "bluedart": 12, "delhivery": 10, "delivery boy": 10
+        "bluedart": 12, "delhivery": 10, "delivery boy": 10,
+        # Hindi courier
+        "parcel mein drugs": 30, "parcel pakda gaya": 25,
+        "customs ne roka": 22, "saamaan roka gaya": 20,
+        "parcel mein illegal": 28, "delivery ruk gayi": 15,
     }
     
     # Job/loan scams
@@ -158,7 +208,13 @@ class ScamDetector:
         "processing charges": 20, "registration fee": 22,
         "advance payment": 22, "security deposit": 20,
         "earn daily": 20, "earn weekly": 18, "guaranteed income": 25,
-        "no investment": 15, "investment required": 18
+        "no investment": 15, "investment required": 18,
+        # Hindi job/loan
+        "ghar baithe kaam": 20, "ghar baithe kamaiye": 22,
+        "naukri": 12, "naukri milegi": 18, "rozgar": 12,
+        "loan mil gaya": 22, "loan approved hai": 22,
+        "advance dena hoga": 22, "registration fees do": 22,
+        "roz kamao": 20, "daily kamai": 18, "paisa hi paisa": 25,
     }
     
     # =========================================================================
@@ -204,6 +260,15 @@ class ScamDetector:
         # Investment scam
         (r"(invest|trading).{0,30}(guaranteed|double|triple|profit)", 35, "investment_scam"),
         (r"(crypto|bitcoin|forex).{0,30}(profit|return|guaranteed)", 35, "crypto_scam"),
+        
+        # Hindi compound patterns
+        (r"(aadhaar|aadhar|pan).{0,30}(band|block|galat istemal|cancel)", 35, "identity_threat"),
+        (r"(police|cbi|ed).{0,30}(bhejenge|aa rahi|pakad|giraftar)", 40, "govt_threat"),
+        (r"(sim|number|mobile).{0,30}(band|block|galat istemal|fraud)", 35, "telecom_scam"),
+        (r"(paisa|paise|raqam).{0,30}(bhejo|transfer|de do|jama)", 30, "payment_scam"),
+        (r"(parcel|courier).{0,30}(drugs|pakda|roka|illegal)", 40, "courier_scam"),
+        (r"(loan|naukri|kamai).{0,30}(milegi|approved|guaranteed|ghar baithe)", 28, "job_scam"),
+        (r"(jail|giraftar|arrest).{0,20}(hoga|hogi|jayenge|karenge)", 40, "intimidation_scam"),
     ]
     
     # =========================================================================
@@ -214,7 +279,11 @@ class ScamDetector:
     ESCALATION_SIGNALS = [
         "last warning", "final chance", "we tried to contact",
         "this is your last", "if you don't respond", "action will be taken",
-        "we are forced to", "no other option", "compelled to proceed"
+        "we are forced to", "no other option", "compelled to proceed",
+        # Hindi escalation
+        "aakhri warning", "aakhri chetavni", "akhri mauka",
+        "karwahi hogi", "majboor hain", "jawab nahi diya toh",
+        "koi aur rasta nahi", "aage badh jayenge",
     ]
     
     # Pressure tactics in sequence

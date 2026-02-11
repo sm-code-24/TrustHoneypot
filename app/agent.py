@@ -26,7 +26,27 @@ class HoneypotAgent:
     - Shows concern but doesn't immediately comply
     - Stalls for time with believable excuses
     - Never reveals that we know it's a scam
+    
+    Supports both English and Hindi (Hinglish) conversations.
+    Detects language from scammer messages and responds accordingly.
     """
+    
+    # Hindi word markers for language detection
+    _HINDI_MARKERS = [
+        "karo", "kijiye", "karein", "batao", "bataiye", "bhejo", "dijiye",
+        "haan", "nahi", "ji", "sahab", "sir ji", "sahib", "beta",
+        "aap", "aapka", "mera", "meri", "humara", "hamara",
+        "kya", "kaise", "kahan", "kyun", "kab", "kaun",
+        "hai", "hain", "tha", "thi", "hoga", "hogi", "raha", "rahi",
+        "paisa", "paise", "raqam", "khata", "naukri",
+        "police", "giraftar", "thana", "court", "jail",
+        "aadhaar", "aadhaar", "sim", "otp",
+        "abhi", "jaldi", "turant", "fauran",
+        "namaste", "namaskar", "dhanyavad", "shukriya",
+        "bhai", "didi", "uncle", "aunty", "madam",
+        "samajh", "samjha", "samjho", "bolo", "suno", "dekho",
+        "achha", "theek", "sahi",
+    ]
     
     # Neutral responses for non-scam / uncertain cases
     NEUTRAL_RESPONSES = [
@@ -276,6 +296,156 @@ class HoneypotAgent:
         "IFSC code also you need? That I definitely don't know. Only passbook has it I think.",
     ]
 
+    # =========================================================================
+    # HINDI-PRIMARY RESPONSE POOLS
+    # =========================================================================
+    
+    HINDI_INITIAL_RESPONSES = [
+        "Haan ji? Kaun bol raha hai? Main samjha nahi.",
+        "Namaste ji, aap kaun? Kahan se bol rahe hain?",
+        "Ji? Ye kaisa phone hai? Main pehchaan nahi pa raha.",
+        "Arey, kaun hai? Mera phone bahut slow hai, dobara bataiye.",
+        "Haan bolo bhai, kya baat hai? Main abhi khaana kha raha tha.",
+        "Ji? Mujhe kuch samajh nahi aaya. Dhire dhire bataiye.",
+        "Kaun sahab? Main kisi ko jaanta bhi nahi. Galat number hai shayad.",
+        "Ek minute ruko, main TV ki awaaz kam karta hoon. Haan bolo ab.",
+        "Hello ji? Aapki awaaz toot rahi hai. Network theek nahi hai yahan.",
+        "Ji bataiye, lekin pehle batao aap kaun hain? Kisi company se ho?",
+        "Namaste, main Sharma ji bol raha hoon. Aap kaun sahab?",
+        "Haanji, bol rahe hain? Main pooja mein tha, abhi aaya.",
+    ]
+    
+    HINDI_VERIFICATION_RESPONSES = [
+        "Arey, mere account mein kya dikkat hai? Kal toh ATM se paisa nikala tha!",
+        "KYC? Arey humne toh pichle mahine bank branch mein jaake karwaya tha.",
+        "Aap sach mein bank se bol rahe ho? Mera bank toh sirf SMS bhejta hai, call nahi karta.",
+        "Mujhe toh koi SMS nahi aaya. Aap sure ho ki mera hi account hai?",
+        "Branch manager Verma sahab ko jaanta hoon main. Unse baat kara do pehle.",
+        "Mera khata suspend? Lekin kal hi pension aayi hai usme toh!",
+        "Aadhaar update? Arey humne toh post office mein link karwaya tha Diwali ke time.",
+        "Aapka employee number kya hai? Main branch se verify karunga pehle.",
+        "Bank waale toh kabhi aisa call nahi karte. Mera beta bolta hai savdhan raho.",
+        "HDFC se bol rahe ho? Mera toh SBI mein khata hai bhai.",
+        "Ye sab online online mujhe nahi aata ji. Koi aur tarika bataiye.",
+        "Aapki id kya hai? Main note karta hoon, phir bank jaake puchhunga.",
+    ]
+    
+    HINDI_PAYMENT_RESPONSES = [
+        "Sachchi? Inaam jeeta? Lekin maine toh koi contest mein hissa nahi liya!",
+        "Lottery? Bhai main toh lottery ka ticket bhi nahi khareedta. Pakka galti hai.",
+        "Kitne paise ki baat ho rahi hai? Bahut achha lag raha hai, sach mein?",
+        "Refund aa raha hai? Lekin maine toh koi complaint nahi ki. Kiska refund?",
+        "Paisa dene ke liye mera bank detail kyun chahiye? Ye ulta lag raha hai.",
+        "Meri padosan aunty ke 2 lakh lut gaye aise hi call se. Aap genuine ho na?",
+        "Processing fee? Jab aap de rahe ho paisa, toh main kyun bharuun pehle?",
+        "Achha, toh ye paisa cheque se aayega ya seedha bank mein? Kab tak?",
+        "Main apni wife se puchh leta hoon. Wo sab paison ka hisaab rakhti hai.",
+        "10 lakh?! Arey wah! Lekin ruko, maine kuch enter hi nahi kiya tha.",
+    ]
+    
+    HINDI_STALLING_RESPONSES = [
+        "Ek minute ruko ji, darwaaze pe koi hai. Doodh wala aaya hoga.",
+        "Beta, ruko zara. Mera chasma dhundh raha hoon. Bina chasme sab dhundla dikhta hai.",
+        "Phone ki battery 5% dikh rahi hai. Charger lagata hoon pehle.",
+        "Main abhi daal bana raha hoon. 10 minute baad baat kar sakte hain?",
+        "Ruko, mera beta Rahul ko phone karta hoon. Wo sab bank ka kaam karta hai.",
+        "Network bahut kharab hai yahan. Thoda zor se bolo na.",
+        "Main mandir mein hoon abhi. Shaam 7 baje ke baad call karna.",
+        "Ek second, meri BP ki dawai ka time ho gaya. Medicine le leta hoon.",
+        "Ruko ruko, doosre phone pe bhi ghanti baj rahi hai. Important call hai.",
+        "Cooker ki seeti baj rahi hai! Gas band karta hoon pehle.",
+        "Bijli gayi abhi! Inverter start hone mein 2 minute lagta hai. Ruko.",
+        "Pota ro raha hai. Dekh leta hoon kya hua. Tum mat jaana haan.",
+    ]
+    
+    HINDI_FEARFUL_RESPONSES = [
+        "Arey Ram! Police mat bhejo please! Main poora cooperate karunga.",
+        "Please sir, mujhe arrest mat karo! Main retired sarkari naukri wala hoon.",
+        "Jail? Sir mujhe sugar aur BP hai. Main jail nahi jaa sakta!",
+        "Mera beta America mein hai. Main akela hoon. Please madad karo na.",
+        "Main ro raha hoon sir. Meri late wife hamesha bolti thi savdhan raho.",
+        "Court ka notice? Lekin maine toh zindagi mein kuch galat nahi kiya!",
+        "Sir mujhe bahut darr lag raha hai. Haath kaamp rahe hain. Ek minute dijiye.",
+        "Haan sir, main jo bologe wo karunga. Bas mera naam saaf kar do please.",
+        "Meri beti ki shaadi hai agle mahine. Agar arrest hua toh kya hoga?",
+        "Sir main 35 saal school principal raha hoon. Meri izzat ka sawaal hai.",
+        "FIR? Sir main toh Red Cross mein blood donate karta hoon! Galti ho gayi koi!",
+        "Please sir, main vidhwa hoon. Meri madad karo, pareshaan mat karo.",
+    ]
+    
+    HINDI_DIGITAL_ARREST_RESPONSES = [
+        "Video call? Theek hai sir, khol raha hoon. Lekin ghar se bahar kyun nahi ja sakta?",
+        "Sir main call pe hoon, disconnect nahi karunga. Aage bataiye kya karun.",
+        "Sir bahut darr lag raha hai. Ghar waale so rahe hain. Unhe pata nahi hai.",
+        "CBI sahab, main toh seedha saadha retired teacher hoon. Koi crime nahi kiya maine!",
+        "ED? Income Tax? Sir main har saal honestly return file karta hoon!",
+        "Digital arrest? Sir ye kya hota hai? Main samjha nahi. Mujhe monitor kar rahe ho?",
+        "Haan sir, main usi jagah baitha hoon. Hila nahi hoon. Patrol car mat bhejna please.",
+        "Sir 2 ghante ho gaye call pe. Phone garam ho raha hai. Lekin disconnect nahi karunga.",
+        "Mera beta doosre phone se call kar raha hai sir. Uthaaun ya violation hoga?",
+    ]
+    
+    HINDI_DETAIL_SEEKING = [
+        "Theek hai, lekin mujhe step by step bataiye kya karna hai. Dhire dhire.",
+        "Kis number pe paisa bhejna hai? Saaf saaf likhwao mujhe.",
+        "UPI ID kya hai aapka? Main pehle Rs 1 bhej ke check karta hoon.",
+        "Account number dobara bol dijiye aaram se. Main likh raha hoon...",
+        "IFSC code kya hai? Bank hamesha maangta hai ye.",
+        "WhatsApp pe link bhej do na. Phone pe karna aasaan hota hai mujhe.",
+        "Aapka office ka landline number kya hai? Verify karna chahta hoon.",
+        "UPI ID poora bataiye. @paytm hai ya @ybl ya kuch aur?",
+        "Theek hai, phone taiyaar hai. Kaun sa app kholuun - Paytm ya PhonePe?",
+        "Kitna paisa bhejna hai exactly? Aur kis naam se?",
+        "Beta, UPI ID ek ek letter bolo. Meri sunai kam hoti hai.",
+        "NEFT karun ya IMPS? Kaun sa jaldi hota hai?",
+    ]
+    
+    HINDI_COMPLIANT_RESPONSES = [
+        "Theek hai sahab, main aap pe bharosa karta hoon. Bataiye kya karun.",
+        "Ji haan, ab samajh aa gaya. Pehle confuse tha. Aage bataiye.",
+        "Maaf kijiye sahab, shaq kiya aapse. Aap sahi bol rahe ho. Kya karun ab?",
+        "Shukriya samjhane ke liye. Main taiyaar hoon, bataiye kya karna hai.",
+        "Main cooperate karunga poora poora. Bas mera naam saaf ho jaaye.",
+        "Theek hai theek hai, main paisa bhejta hoon. Details ek baar aur bata do.",
+        "Aap sahi keh rahe ho sahab. Der nahi karni chahiye. Bataiye aur main karta hoon.",
+        "Main maafi maangta hoon itne sawaal puchhe. Ab bass bataiye aur main karunga.",
+    ]
+    
+    HINDI_TECH_CONFUSION_RESPONSES = [
+        "Google Pay mein kuch error aa raha hai. NEFT se kar doon?",
+        "Bank balance kaise check karun? App khola hai... fingerprint maang raha hai...",
+        "Screen share kaise karte hain? Mera camera theek se kaam nahi karta.",
+        "App bol raha hai 'insufficient balance'. FD se transfer karna padega pehle.",
+        "Kaun sa app kholuun? Paytm, PhonePe, BHIM - teeno hain mere paas.",
+        "Phone bahut slow hai. Ek baar restart karun? Ruko.",
+        "UPI pin? Ye wahi hai jo ATM pin hai? Main hamesha confuse ho jaata hoon.",
+        "Transaction failed bol raha hai. Shayad daily limit khatam ho gayi. Doosre bank se try karun?",
+        "Scan kahan hai? Meri poti khaali karne mein help karti hai ye sab.",
+        "PhonePe update maang raha hai pehle. 28 MB download. Mera data kam hai.",
+    ]
+    
+    HINDI_OTP_RESPONSES = [
+        "OTP? Ruko ruko, message dekhta hoon... kis number se aata hai?",
+        "Sir OTP nahi aa raha. Yahan network weak hai. 5 minute ruk jaiye.",
+        "Bahut saare OTP aaye hain, kaun sa chahiye aapko? 3-4 messages hain.",
+        "OTP aaya hai lekin likha hai 'kisi ko na batayen'. Phir bhi bataun?",
+        "Sir OTP expire bol raha hai. 2 minute ki validity thi. Naya bhejiye.",
+        "Padh nahi pa raha, aankhen kamzor hain. 4... 7... ruko chasma lata hoon.",
+        "Beta, galti se message delete ho gaya. Dobara bhej sakte ho?",
+        "OTP aaya hai lekin phone fingerprint maang raha hai message kholne ke liye.",
+        "Sir is number pe OTP nahi aata. Mere bete ne SIM badli hai pichle hafte.",
+    ]
+    
+    HINDI_COURIER_RESPONSES = [
+        "Parcel? Lekin maine toh kuch online order hi nahi kiya! Kaun sa parcel?",
+        "Drugs?! Sir main toh shakahari hoon, Crocin bhi bina doctor ke nahi leta!",
+        "China se? Sir main toh kisi ko nahi jaanta China mein. Pakka galti hai.",
+        "Illegal saamaan? Sir main school teacher retired hoon. Kya bol rahe ho aap!",
+        "Tracking number kya hai? Sir maine sirf ek Flipkart order kiya tha. Bedsheet ka.",
+        "Customs duty? Maine toh kuch import nahi kiya. Beta kabhi kabhi Amazon se books mangata hai.",
+        "Sir phir se check karo. Mera naam bahut common hai. 1000 log honge same naam ke!",
+    ]
+
     # Risk level indicators for notes (text-based for compatibility)
     RISK_EMOJIS = {
         "minimal": "[OK]",
@@ -310,6 +480,21 @@ class HoneypotAgent:
     
     def __init__(self):
         self.session_context: Dict[str, dict] = {}
+    
+    def _detect_language(self, text: str) -> str:
+        """Detect if scammer message is primarily Hindi/Hinglish or English.
+        Returns 'hi' for Hindi/Hinglish, 'en' for English."""
+        words = text.lower().split()
+        if not words:
+            return "en"
+        hindi_count = sum(1 for w in words if w.strip(".,!?;:'\"") in self._HINDI_MARKERS)
+        # If >25% of words are Hindi markers, respond in Hindi
+        if hindi_count / len(words) >= 0.25:
+            return "hi"
+        # Also check for Devanagari script
+        if any('\u0900' <= ch <= '\u097F' for ch in text):
+            return "hi"
+        return "en"
     
     def _get_context(self, session_id: str) -> dict:
         """Get or create context for a session."""
@@ -358,30 +543,30 @@ class HoneypotAgent:
                     context["intel_requested"] = True
     
     def _detect_tactics(self, message: str) -> List[str]:
-        """Figure out what scam tactics they're using."""
+        """Figure out what scam tactics they're using (English + Hindi)."""
         tactics = []
         msg = message.lower()
         
-        if any(w in msg for w in ["urgent", "immediate", "now", "hurry", "quickly", "jaldi", "turant", "minutes"]):
+        if any(w in msg for w in ["urgent", "immediate", "now", "hurry", "quickly", "jaldi", "turant", "minutes", "abhi", "fauran", "fatafat", "der mat", "jald se jald"]):
             tactics.append("urgency")
-        if any(w in msg for w in ["verify", "kyc", "update", "confirm", "suspended", "blocked"]):
+        if any(w in msg for w in ["verify", "kyc", "update", "confirm", "suspended", "blocked", "khata band", "account band", "verify karo", "kyc karo"]):
             tactics.append("verification")
-        if any(w in msg for w in ["refund", "prize", "won", "reward", "cashback", "lottery", "winner"]):
+        if any(w in msg for w in ["refund", "prize", "won", "reward", "cashback", "lottery", "winner", "inaam", "inam", "lottery jeete", "paisa wapas"]):
             tactics.append("payment_lure")
-        if any(w in msg for w in ["police", "legal", "arrest", "court", "case", "warrant", "cbi", "ed", "jail"]):
+        if any(w in msg for w in ["police", "legal", "arrest", "court", "case", "warrant", "cbi", "ed", "jail", "giraftar", "giraftaar", "pakad", "muqadma", "kanuni", "kanooni", "thana"]):
             tactics.append("threat")
-        if any(w in msg for w in ["upi", "transfer", "pay", "send", "bhim", "paytm", "phonepe", "gpay"]):
+        if any(w in msg for w in ["upi", "transfer", "pay", "send", "bhim", "paytm", "phonepe", "gpay", "paisa bhejo", "paise bhejo", "paise transfer", "raqam bhejo"]):
             tactics.append("payment_request")
-        if any(w in msg for w in ["video call", "digital arrest", "stay on call", "don't disconnect", "skype", "zoom"]):
+        if any(w in msg for w in ["video call", "digital arrest", "stay on call", "don't disconnect", "skype", "zoom", "call pe raho", "disconnect mat karo", "video pe raho"]):
             tactics.append("digital_arrest")
-        if any(w in msg for w in ["parcel", "courier", "package", "customs", "fedex", "dhl", "drugs", "contraband"]):
+        if any(w in msg for w in ["parcel", "courier", "package", "customs", "fedex", "dhl", "drugs", "contraband", "saamaan", "parcel mein"]):
             tactics.append("courier")
         # More specific credential detection
-        if any(w in msg for w in ["otp", "one time password", "6 digit", "verification code"]):
+        if any(w in msg for w in ["otp", "one time password", "6 digit", "verification code", "code batao", "otp batao", "otp bhejo"]):
             tactics.append("otp_request")
-        if any(w in msg for w in ["account number", "bank account", "account no", "a/c number", "a/c no"]):
+        if any(w in msg for w in ["account number", "bank account", "account no", "a/c number", "a/c no", "khata number", "account batao"]):
             tactics.append("account_request")
-        if any(w in msg for w in ["password", "pin", "cvv", "card number", "debit card", "credit card", "atm pin"]):
+        if any(w in msg for w in ["password", "pin", "cvv", "card number", "debit card", "credit card", "atm pin", "pin batao", "password batao"]):
             tactics.append("credential")
             
         return tactics
@@ -397,10 +582,14 @@ class HoneypotAgent:
         - Conversation escalation level (adapts dynamically)
         - Previous context from conversation history
         - Specific scam type detected
+        - Language of scammer message (English or Hindi/Hinglish)
         """
         context = self._get_context(session_id)
         tactics = self._detect_tactics(scammer_message)
         context["detected_tactics"].update(tactics)
+        
+        # Detect language preference
+        lang = self._detect_language(scammer_message)
         
         # Track last tactic for continuity
         if tactics:
@@ -416,57 +605,43 @@ class HoneypotAgent:
         
         escalation = context["escalation_level"]
         
-        # Dynamic response selection based on context and scam type
+        # Dynamic response selection based on context, scam type, and language
         if message_count <= 1:
-            # First message - always confused
-            pool = self.INITIAL_RESPONSES
+            pool = self.HINDI_INITIAL_RESPONSES if lang == "hi" else self.INITIAL_RESPONSES
         elif "digital_arrest" in tactics:
-            # Digital arrest scam - very common, show extreme fear and compliance
-            pool = self.DIGITAL_ARREST_RESPONSES
+            pool = self.HINDI_DIGITAL_ARREST_RESPONSES if lang == "hi" else self.DIGITAL_ARREST_RESPONSES
         elif "courier" in tactics:
-            # Courier/parcel scam - deny knowledge, show confusion
-            pool = self.COURIER_RESPONSES
+            pool = self.HINDI_COURIER_RESPONSES if lang == "hi" else self.COURIER_RESPONSES
         elif "otp_request" in tactics:
-            # They want OTP specifically - stall with OTP-related confusion
-            pool = self.OTP_RESPONSES
+            pool = self.HINDI_OTP_RESPONSES if lang == "hi" else self.OTP_RESPONSES
         elif "account_request" in tactics:
-            # They want account number - stall looking for passbook/details
-            pool = self.ACCOUNT_NUMBER_RESPONSES
+            pool = self.ACCOUNT_NUMBER_RESPONSES  # Already has Hindi mixed in
         elif "credential" in tactics:
-            # They want other credentials (PIN, CVV, password)
-            pool = self.TECH_CONFUSION_RESPONSES
+            pool = self.HINDI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.TECH_CONFUSION_RESPONSES
         elif escalation >= 3 or "threat" in tactics:
-            # They're threatening - show fear
             if message_count > 4 and random.random() > 0.4:
-                # Sometimes show compliance after extended fear
-                pool = self.COMPLIANT_RESPONSES
+                pool = self.HINDI_COMPLIANT_RESPONSES if lang == "hi" else self.COMPLIANT_RESPONSES
             else:
-                pool = self.FEARFUL_RESPONSES
+                pool = self.HINDI_FEARFUL_RESPONSES if lang == "hi" else self.FEARFUL_RESPONSES
         elif context["intel_requested"] or message_count > 5:
-            # We've been engaging a while - mix of detail seeking and tech confusion
             if random.random() > 0.5:
-                pool = self.DETAIL_SEEKING
+                pool = self.HINDI_DETAIL_SEEKING if lang == "hi" else self.DETAIL_SEEKING
             else:
-                pool = self.TECH_CONFUSION_RESPONSES
+                pool = self.HINDI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.TECH_CONFUSION_RESPONSES
         elif "payment_request" in tactics or escalation >= 2:
-            # They want money/payment - time to extract intel
-            pool = self.DETAIL_SEEKING
+            pool = self.HINDI_DETAIL_SEEKING if lang == "hi" else self.DETAIL_SEEKING
             context["intel_requested"] = True
         elif "payment_lure" in tactics:
-            # They're offering money - be skeptical but curious
-            pool = self.PAYMENT_RESPONSES
+            pool = self.HINDI_PAYMENT_RESPONSES if lang == "hi" else self.PAYMENT_RESPONSES
         elif "verification" in tactics:
-            # They want to verify something - be cautious
-            pool = self.VERIFICATION_RESPONSES
+            pool = self.HINDI_VERIFICATION_RESPONSES if lang == "hi" else self.VERIFICATION_RESPONSES
         elif "urgency" in tactics and escalation >= 1:
-            # Urgent but not threatening - stall
-            pool = self.STALLING_RESPONSES
+            pool = self.HINDI_STALLING_RESPONSES if lang == "hi" else self.STALLING_RESPONSES
         else:
-            # Default - mix of stalling and verification
             if random.random() > 0.5:
-                pool = self.STALLING_RESPONSES
+                pool = self.HINDI_STALLING_RESPONSES if lang == "hi" else self.STALLING_RESPONSES
             else:
-                pool = self.VERIFICATION_RESPONSES
+                pool = self.HINDI_VERIFICATION_RESPONSES if lang == "hi" else self.VERIFICATION_RESPONSES
         
         # Smart rotation: avoid repeating recent responses from any pool
         recent = context["responses_given"][-6:]  # Track last 6

@@ -16,23 +16,23 @@ import { useTheme } from "../ThemeContext";
 const CYCLE_WORDS = [
   {
     text: "Engage",
-    dark: "from-blue-400 to-cyan-300",
-    light: "from-blue-700 to-cyan-600",
+    dark: "linear-gradient(to right, #60a5fa, #67e8f9)",
+    light: "linear-gradient(to right, #1d4ed8, #0891b2)",
   },
   {
     text: "Extract",
-    dark: "from-purple-400 to-pink-300",
-    light: "from-purple-700 to-pink-600",
+    dark: "linear-gradient(to right, #c084fc, #f9a8d4)",
+    light: "linear-gradient(to right, #7e22ce, #db2777)",
   },
   {
     text: "Detect",
-    dark: "from-emerald-400 to-teal-300",
-    light: "from-emerald-700 to-teal-600",
+    dark: "linear-gradient(to right, #34d399, #5eead4)",
+    light: "linear-gradient(to right, #047857, #0f766e)",
   },
   {
     text: "Protect",
-    dark: "from-amber-400 to-orange-300",
-    light: "from-amber-600 to-orange-600",
+    dark: "linear-gradient(to right, #fbbf24, #fb923c)",
+    light: "linear-gradient(to right, #d97706, #ea580c)",
   },
 ];
 
@@ -197,11 +197,18 @@ export default function Landing() {
         {/* Animated cycling word */}
         <div className="mb-4 h-16 md:h-[5.5rem] flex items-center justify-center overflow-hidden">
           <span
-            className={`text-5xl md:text-7xl font-extrabold bg-gradient-to-r ${gradient} bg-clip-text text-transparent transition-all duration-[400ms] ease-out ${
+            className={`text-5xl md:text-7xl font-extrabold transition-all duration-[400ms] ease-out ${
               visible ?
                 "opacity-100 translate-y-0 scale-100"
               : "opacity-0 translate-y-3 scale-95"
-            }`}>
+            }`}
+            style={{
+              backgroundImage: gradient,
+              WebkitBackgroundClip: "text",
+              backgroundClip: "text",
+              WebkitTextFillColor: "transparent",
+              color: "transparent",
+            }}>
             {word.text}
           </span>
         </div>

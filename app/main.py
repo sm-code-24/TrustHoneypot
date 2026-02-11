@@ -23,6 +23,7 @@ from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from typing import Optional
 import logging
+import time
 
 from models import (
     HoneypotRequest,
@@ -38,8 +39,9 @@ from llm import llm_service
 from db import db_service
 
 # Set up logging so we can see what's happening
+LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
-    level=logging.INFO,
+    level=getattr(logging, LOG_LEVEL, logging.INFO),
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 )
 logger = logging.getLogger(__name__)
@@ -48,22 +50,77 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Agentic Honey-Pot API",
     description="Scam Detection & Intelligence Extraction for GUVI Hackathon",
-    version="1.0.0"
+    version="2.0.0",
+    docs_url="/docs" if os.getenv("ENVIRONMENT", "development") != "production" else None,
+    redoc_url=None,
 )
 
-# Allow cross-origin requests (needed for the evaluation platform)
+# CORS — restrict in production, wide open in dev
+_allowed_origins = os.getenv("CORS_ORIGINS", "*").split(",")
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=_allowed_origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
 
 
+# ─── Production Middleware ────────────────────────────────────────────────────
+
+@app.middleware("http")
+async def add_timing_header(request: Request, call_next):
+    """Add X-Process-Time header and log request timing."""
+    start = time.perf_counter()
+    response = await call_next(request)
+    elapsed_ms = (time.perf_counter() - start) * 1000
+    response.headers["X-Process-Time"] = f"{elapsed_ms:.0f}ms"
+    if elapsed_ms > 2000:
+        logger.warning(f"SLOW {request.method} {request.url.path} {elapsed_ms:.0f}ms")
+    return response
+
+
+# ─── Simple in-memory rate limiter ────────────────────────────────────────────
+
+_rate_store: dict = {}  # ip -> (count, window_start)
+RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
+
+@app.middleware("http")
+async def rate_limit_middleware(request: Request, call_next):
+    """Basic per-IP rate limiting for production safety."""
+    client_ip = request.client.host if request.client else "unknown"
+    now = time.time()
+    window = 60  # 1 minute window
+    
+    entry = _rate_store.get(client_ip, (0, now))
+    count, window_start = entry
+    
+    if now - window_start > window:
+        # New window
+        _rate_store[client_ip] = (1, now)
+    elif count >= RATE_LIMIT:
+        return JSONResponse(
+            status_code=429,
+            content={"detail": "Rate limit exceeded. Try again in a minute."},
+        )
+    else:
+        _rate_store[client_ip] = (count + 1, window_start)
+    
+    # Cleanup old entries periodically (every 100 requests)
+    if len(_rate_store) > 500:
+        cutoff = now - window * 2
+        _rate_store.update({
+            k: v for k, v in _rate_store.items() if v[1] > cutoff
+        })
+    
+    return await call_next(request)
+
+
 @app.on_event("startup")
 async def startup_event():
-    """Log essential startup information"""
+    """Log essential startup information and run initial cleanup."""
+    memory.cleanup_stale_sessions()
+    memory.enforce_limit()
     logger.info("API Ready | Docs: /docs | Health: GET / | Honeypot: POST /honeypot")
 
 
@@ -87,7 +144,8 @@ async def health_check():
     return {
         "status": "online",
         "service": "Agentic Honey-Pot API",
-        "version": "1.0.0"
+        "version": "2.0.0",
+        "languages": ["en", "hi"],
     }
 
 

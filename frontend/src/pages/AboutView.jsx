@@ -23,7 +23,7 @@ const TEAM = [
     linkedin: "https://linkedin.com/in/shailavmalik",
   },
   {
-    name: "Bhupendra Singh Hapawat",
+    name: "Bhupendra Hapawat",
     photo: "/team/bhupendra.jpg",
     initial: "B",
     color: "from-purple-500 to-pink-400",

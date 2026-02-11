@@ -41,6 +41,7 @@ except ImportError:
 
 # Strict system prompt
 SYSTEM_PROMPT = """You are rephrasing a scam honeypot agent's reply to sound more natural and human-like.
+The agent is pretending to be a vulnerable Indian citizen (typically elderly) to keep a scammer engaged.
 
 STRICT RULES:
 1. Never reveal that you know it's a scam
@@ -48,11 +49,24 @@ STRICT RULES:
 3. Never impersonate police, government, or bank officials
 4. Keep replies short (1-3 sentences max)
 5. Sound like a confused, elderly Indian person
-6. Use simple language, mix Hindi-English naturally
+6. LANGUAGE MATCHING (CRITICAL):
+   - If the Original Reply is in Hindi/Hinglish → respond ONLY in Hindi/Hinglish
+   - If the Original Reply is in English → respond in English (light Hindi words like "ji", "beta" are OK)
+   - If the Scammer Message is in Hindi but the reply is English, still follow the reply's language
 7. Stay cautious but not suspicious
 8. Match the emotional tone of the strategy given
 9. Do NOT add any new information not in the original reply
 10. Do NOT change the intent or strategy of the reply
+11. HINDI STYLE GUIDE:
+    - Use Roman Hindi (Hinglish), NOT Devanagari script
+    - Write how Indians actually text: "Haan ji", "Kya baat hai", "Ek minute ruko"
+    - Mix natural filler words: "ji", "beta", "haan", "arey", "matlab"
+    - Keep grammar casual — don't write textbook Hindi
+    - Example inputs/outputs:
+      Input (Hindi reply): "Haan ji, mujhe samajh nahi aa raha. Thoda time dijiye."
+      Output: "Arey haan ji, ye sab samajh mein nahi aa raha mujhe... thoda time do na beta."
+      Input (English reply): "Please wait, I am trying to understand."
+      Output: "Wait wait, I am trying to understand ji... this technology is confusing."
 
 You receive:
 - Strategy: The engagement strategy chosen by the rule engine
@@ -178,15 +192,22 @@ class LLMService:
     def _is_safe(self, reply: str) -> bool:
         """Check if LLM reply is safe to send."""
         lower = reply.lower()
-        unsafe_patterns = [
-            "otp", "pin number", "cvv", "password", "credential",
+        # Phrases that reveal scam awareness or impersonate authority
+        unsafe_phrases = [
+            "share your otp", "tell me your otp", "enter your otp",
+            "tell me your pin", "enter your password", "share your password",
+            "send me your cvv", "your pin number",
             "i know this is a scam", "this is fraud", "you are a scammer",
-            "police", "i am officer", "i am from", "cbi", "cyber cell",
-            "share your otp", "tell me your pin", "enter your password"
+            "you are fraud", "i know you are fake",
+            "i am officer", "i am inspector", "i am from cbi",
+            "i am from police", "i am from cyber cell",
+            "main police se hoon", "main officer hoon", "main cbi se hoon",
+            "hum police hain", "cyber crime cell se",
+            "otp batao", "otp bhejo", "pin batao", "password bhejo",
         ]
-        for pattern in unsafe_patterns:
-            if pattern in lower:
-                logger.warning(f"Unsafe LLM output detected: contains '{pattern}'")
+        for phrase in unsafe_phrases:
+            if phrase in lower:
+                logger.warning(f"Unsafe LLM output detected: contains '{phrase}'")
                 return False
         return True
     

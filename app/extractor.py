@@ -148,7 +148,23 @@ class IntelligenceExtractor:
         # Jobs/Loans - scam patterns
         "work from home job", "instant loan", "investment opportunity",
         # Actions - scam-specific
-        "click here", "click this link", "send money", "share details"
+        "click here", "click this link", "send money", "share details",
+        # Hindi urgency
+        "jaldi karo", "abhi karo", "turant", "fauran", "der mat karo",
+        # Hindi verification/account
+        "khata band", "account band", "kyc karo", "verify karo", "aadhaar link karo",
+        # Hindi money/payment
+        "paisa bhejo", "paise bhejo", "inaam", "lottery jeete", "refund milega",
+        "processing fees", "registration fees",
+        # Hindi threats
+        "giraftar", "jail bhejenge", "police bhejenge", "court ka notice",
+        "case darj", "kanuni karwahi", "warrant nikla",
+        # Hindi digital arrest
+        "digital arrest", "video call pe raho", "disconnect mat karo",
+        # Hindi credential
+        "otp batao", "pin batao", "password batao", "code bhejo",
+        # Hindi courier
+        "parcel mein drugs", "customs ne roka", "illegal saamaan",
     ]
     
     def __init__(self):
@@ -376,10 +392,6 @@ class IntelligenceExtractor:
             identifiers.append(f"Messaging: {msg_id}")
         
         return identifiers
-
-
-# Single instance used across the app
-extractor = IntelligenceExtractor()
 
 
 # Single instance used across the app
