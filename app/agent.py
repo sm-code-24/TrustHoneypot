@@ -12,8 +12,23 @@ when they think they've got a real victim on the hook.
 The responses are designed to be believable. No one talks like a robot.
 """
 import random
+import logging
 from typing import Dict, List, Optional
 from detector import detector
+
+logger = logging.getLogger(__name__)
+
+# ─── Engagement Stage Definitions ─────────────────────────────────────────────
+ENGAGEMENT_STAGES = {
+    "initial_contact":        {"label": "Initial Contact",        "description": "First interaction, establishing persona",   "progress": 5},
+    "rapport_building":       {"label": "Building Rapport",       "description": "Gaining trust, showing confusion",          "progress": 15},
+    "urgency_response":       {"label": "Responding to Pressure", "description": "Reacting to threats or urgency tactics",    "progress": 30},
+    "scam_confirmed":         {"label": "Scam Confirmed",         "description": "Scam identified, engagement deepening",     "progress": 40},
+    "information_gathering":  {"label": "Information Gathering",   "description": "Extracting scammer details",               "progress": 55},
+    "deep_engagement":        {"label": "Deep Engagement",        "description": "Prolonged stalling and engagement",         "progress": 70},
+    "intelligence_extraction":{"label": "Intelligence Extraction", "description": "Active extraction of UPI/bank/phone data", "progress": 85},
+    "intelligence_reported":  {"label": "Intelligence Reported",   "description": "Callback sent, intel forwarded",           "progress": 100},
+}
 
 
 class HoneypotAgent:
@@ -49,19 +64,69 @@ class HoneypotAgent:
     ]
     
     # Neutral responses for non-scam / uncertain cases
+    # These should keep the conversation OPEN, not dismiss the caller.
+    # Even for uncertain messages, we want to stay engaged.
     NEUTRAL_RESPONSES = [
-        "Hello? I think you may have the wrong number.",
-        "Sorry, I'm not sure what this is about. Can you explain?",
-        "I don't recognize this. Who is this?",
-        "I'm not sure I understand. What are you referring to?",
-        "Hmm, I don't recall anything about this. Are you sure you have the right person?",
-        "Ji? Kaun bol raha hai?",
-        "Aap kaun? Main samjha nahi.",
-        "Sorry, wrong number I think. Please check once.",
-        "I didn't receive any such notification. You must have wrong contact.",
-        "Can you repeat? The connection was not clear.",
-        "I'm busy with some work right now. Is it important?",
-        "Hello? I can hear you. What is it about?",
+        "Hello? Yes, I'm here. What is this about exactly?",
+        "Sorry, I'm not sure what this is about. Can you explain properly?",
+        "I don't recognize this number. Who is calling and what do you need?",
+        "I'm not sure I understand. What exactly are you referring to?",
+        "Hmm, I didn't expect any call like this. Can you tell me more?",
+        "I didn't receive any message about this. But please, explain what happened?",
+        "Can you repeat that? The line was not very clear.",
+        "I'm a bit busy right now, but tell me quickly — is it something important?",
+        "Hello? Yes yes, I can hear you. Go on, what is this regarding?",
+        "Wait, who gave you this number? What is this about exactly?",
+        "One moment... I'm not following. Start from the beginning please.",
+        "Hmm okay, I'm listening. But who exactly are you and what do you need?",
+        "Hello? I didn't quite catch that. Please say that again slowly.",
+        "Sorry beta, I was doing something. Now tell me, what is the matter?",
+        "Yes? What is it? I don't understand what you are talking about.",
+        "Is this some company call? Tell me clearly what you want.",
+    ]
+    
+    # Hindi neutral responses (for Hindi/Hinglish messages)
+    HINDI_NEUTRAL_RESPONSES = [
+        "Haan ji? Bataiye, kya baat hai? Main sun raha hoon.",
+        "Aap kaun bol rahe ho? Thoda detail mein bataiye na.",
+        "Ji? Samajh nahi aaya. Dhire dhire bataiye please.",
+        "Kaun hai? Kahan se bol rahe ho? Kya chahiye aapko?",
+        "Hello ji? Haan bolo. Kya hai matter?",
+        "Ek minute, main samjha nahi. Phir se batao kya hua?",
+        "Ji bataiye, lekin pehle batao aap kaun hain? Kisi company se ho?",
+        "Haan ji, bol rahe hain? Main dhyan se sun raha hoon.",
+        "Arey, kya baat hai? Main kuch samjha nahi. Dhire bolo.",
+        "Hello? Haan haan, sun raha hoon. Aage bolo.",
+    ]
+    
+    # Follow-up responses for short/vague messages like "Yes", "Ok", "Sure"
+    # These maintain conversation coherence when the scammer gives a minimal response
+    SHORT_FOLLOWUP_RESPONSES = [
+        "Okay, but please explain properly. What exactly is the issue?",
+        "Yes yes, I'm listening. Tell me more details please.",
+        "Alright, go ahead. I'm ready to understand. What should I do?",
+        "Fine, but I need more details. My mind is not very sharp these days.",
+        "Hmm, okay. But you haven't explained clearly yet. What do you want me to do?",
+        "Right right. So what is the next step? Tell me slowly.",
+        "I see. But I still don't fully understand. Can you explain in simple words?",
+        "Okay I hear you. But tell me, what exactly do I need to do now?",
+        "Alright alright. Just tell me clearly what happened.",
+        "Okay, continue. I'm paying attention now.",
+        "Hmm, then what? Don't stop, tell me everything.",
+        "Okay okay. But wait... what exactly are you asking me to do?",
+    ]
+    
+    HINDI_SHORT_FOLLOWUP_RESPONSES = [
+        "Theek hai ji, lekin samjhao dhire dhire. Kya karna hai mujhe?",
+        "Haan haan, sun raha hoon. Aage bataiye. Kya karna chahiye?",
+        "Achha, bataiye phir. Mujhe detail mein samjhao.",
+        "Ji theek hai. Lekin clearly bataiye na, kya hua exactly?",
+        "Hmm, theek hai. Mujhe aur detail mein samjhao, dimag thoda slow hai mera.",
+        "Achha achha, aage bolo. Kya karna padega mujhe?",
+        "Haan ji samajh raha hoon. Lekin poori baat toh bataiye.",
+        "Theek hai bhai, bolo bolo. Main sun raha hoon dhyan se.",
+        "Ji haan, aap bolo. Main likh raha hoon sab.",
+        "Achha ji, continue karo. Main samajhne ki koshish kar raha hoon.",
     ]
     
     # First contact - we're confused, who is this?
@@ -81,6 +146,33 @@ class HoneypotAgent:
         "Hello hello? Can you hear me? My phone has some network issue.",
         "Sorry beta, I was doing afternoon prayer. What is urgent?",
         "Kaun? Which department did you say? Speak clearly please.",
+        "Hello? Yes, I'm here. But who are you and what is this about?",
+        "Wait, let me put my hearing aid properly. Now tell me, who is calling?",
+    ]
+    
+    # When scammer insists/confirms after our doubt (handles "Yes, it's you" / "It's the right number")
+    CONFIRMATION_DOUBT_RESPONSES = [
+        "Are you 100% sure? Because I never got any SMS or email about this.",
+        "Okay but... how did you get my number? Banks usually only send SMS no?",
+        "Hmm, if you say so. But I'm still confused. Please explain what happened exactly.",
+        "Really? But nobody in my family told me about any issue. Are you very sure?",
+        "I trust you are genuine sir, but can you just tell me once more what the problem is?",
+        "I see. But my grandson always warns me about these calls. Can you prove you're real?",
+        "Okay okay, I believe you. But please speak slowly, my mind is not so sharp now.",
+        "Fine, I will listen. But first tell me - which bank exactly? I have multiple accounts.",
+        "Alright. But if this is some fraud, I will report to police. Now tell me clearly.",
+        "Let me write this down. So you're saying there is some issue with my account, correct?",
+    ]
+    
+    HINDI_CONFIRMATION_DOUBT_RESPONSES = [
+        "Aap pakka sure ho? Kyunki mujhe toh koi SMS ya email nahi aaya is baare mein.",
+        "Achha lekin... aapko mera number kaise mila? Bank toh SMS bhejte hain normally.",
+        "Hmm, aap keh rahe ho toh theek hai. Lekin mujhe samjhao properly kya hua exactly.",
+        "Sach mein? Lekin ghar mein kisine toh nahi bataya. Bilkul sure ho aap?",
+        "Main maanta hoon aap genuine ho sir, lekin ek baar aur batao problem kya hai?",
+        "Achha achha, maan liya. Lekin dhire dhire bataiye, dimag slow hai mera abhi.",
+        "Theek hai, sun raha hoon. Lekin pehle batao - kaun sa bank exactly?",
+        "Chalo maan leta hoon. Lekin agar fraud nikla toh police mein report karunga.",
     ]
     
     # When they mention account issues, verification, KYC
@@ -446,6 +538,34 @@ class HoneypotAgent:
         "Sir phir se check karo. Mera naam bahut common hai. 1000 log honge same naam ke!",
     ]
 
+    # ─── Hesitation Prefixes (for realism) ────────────────────────────────────
+    HESITATION_EN = [
+        "Hmm...", "Uh...", "Actually...", "Well...", "Let me think...",
+        "Wait...", "One second...", "Oh...", "See...", "I mean...",
+    ]
+    HESITATION_HI = [
+        "Hmm...", "Arey...", "Ruko...", "Ek minute...", "Sochne do...",
+        "Matlab...", "Dekhiye...", "Haan...", "Wo...", "Accha...",
+    ]
+
+    # ─── Probing Questions (to extract more info) ─────────────────────────────
+    PROBING_EN = [
+        "But tell me one thing, who gave you my number?",
+        "Actually, what is your name sir?",
+        "Which city are you calling from?",
+        "Can you give me a reference number for this?",
+        "What time does your office close? I may need to call back.",
+        "Is there a complaint number I should note down?",
+    ]
+    PROBING_HI = [
+        "Lekin ye bataiye, mera number aapko kaise mila?",
+        "Aapka naam kya hai sir?",
+        "Aap kis shehar se bol rahe ho?",
+        "Reference number de dijiye zara.",
+        "Aapka office kab band hota hai? Main waapas call karunga.",
+        "Complaint number kya hai? Main likh leta hoon.",
+    ]
+
     # Risk level indicators for notes (text-based for compatibility)
     RISK_EMOJIS = {
         "minimal": "[OK]",
@@ -505,7 +625,11 @@ class HoneypotAgent:
                 "conversation_history": [],
                 "escalation_level": 0,  # 0=initial, 1=engaged, 2=suspicious, 3=fearful
                 "last_tactic": None,
-                "intel_requested": False  # Have we asked for their details?
+                "intel_requested": False,  # Have we asked for their details?
+                "probes_used": [],  # Probing questions already asked
+                "agent_confidence": 0.0,  # How sure agent is it's a scam (affects tone, NOT detection)
+                "language": "en",  # Detected language for this session
+                "_history_processed_count": 0,  # Track processed history to avoid duplicates
             }
         return self.session_context[session_id]
     
@@ -513,14 +637,16 @@ class HoneypotAgent:
         """
         Process conversation history to build context awareness.
         
-        This ensures agent responses adapt based on:
-        - What the scammer has said before
-        - What tactics have been used
-        - How the conversation has evolved
+        Only processes NEW messages since last call to avoid duplicate
+        history accumulation across multiple requests.
         """
         context = self._get_context(session_id)
         
-        for msg in history:
+        # Only process messages we haven't seen yet
+        already_processed = context.get("_history_processed_count", 0)
+        new_messages = history[already_processed:]
+        
+        for msg in new_messages:
             sender = getattr(msg, 'sender', None) or msg.get('sender', 'scammer')
             text = getattr(msg, 'text', None) or msg.get('text', '')
             
@@ -530,7 +656,7 @@ class HoneypotAgent:
                 context["conversation_history"].append({"role": "scammer", "text": text})
                 
                 # Update escalation level based on tactics
-                if "threat" in tactics:
+                if "threat" in tactics or "digital_arrest" in tactics:
                     context["escalation_level"] = max(context["escalation_level"], 3)
                 elif "payment_request" in tactics:
                     context["escalation_level"] = max(context["escalation_level"], 2)
@@ -541,6 +667,8 @@ class HoneypotAgent:
                 # Check if we've asked for details
                 if any(phrase in text.lower() for phrase in ["upi", "account number", "number should i send"]):
                     context["intel_requested"] = True
+        
+        context["_history_processed_count"] = len(history)
     
     def _detect_tactics(self, message: str) -> List[str]:
         """Figure out what scam tactics they're using (English + Hindi)."""
@@ -568,8 +696,38 @@ class HoneypotAgent:
             tactics.append("account_request")
         if any(w in msg for w in ["password", "pin", "cvv", "card number", "debit card", "credit card", "atm pin", "pin batao", "password batao"]):
             tactics.append("credential")
+        # Bank/authority impersonation signals
+        if any(w in msg for w in ["bank", "sbi", "hdfc", "icici", "axis", "rbi", "reserve bank", "from bank", "bank officer", "department", "government", "ministry"]):
+            tactics.append("impersonation")
+        # Security/alert keywords
+        if any(w in msg for w in ["security", "alert", "warning", "flagged", "suspicious", "compromised", "hacked", "breach"]):
+            tactics.append("security_alert")
+        # Scammer confirming/insisting (response to our doubt) - triggers CONFIRMATION_DOUBT pool
+        confirmation_phrases = [
+            "right number", "right person", "correct number", "correct person", 
+            "yes it's you", "yes you", "it's you", "you only", "your number only",
+            "you need to", "you have to", "you must", "aap hi", "aapka hi", 
+            "sahi number", "sahi hai", "aap ko karna hoga", "aap ko dena hoga",
+            "i am sure", "100%", "definitely you", "confirmed", "no mistake",
+            "your name is", "registered on your", "aapka naam", "aapka hi hai"
+        ]
+        if any(phrase in msg for phrase in confirmation_phrases):
+            tactics.append("confirmation_insist")
             
         return tactics
+    
+    def _is_short_message(self, text: str) -> bool:
+        """Check if scammer message is too short/vague to determine specific tactic."""
+        clean = text.strip().lower().rstrip('.,!?')
+        short_words = {
+            "yes", "no", "ok", "okay", "sure", "fine", "hello", "hi",
+            "haan", "nahi", "theek", "theek hai", "haa", "ji", "ji haan",
+            "hmm", "alright", "right", "ya", "yep", "nope", "k", "kk",
+            "ha", "han", "correct", "true", "sahi", "bilkul", "of course",
+            "definitely", "absolutely", "tell me", "go on", "aage bolo",
+            "bolo", "haan bolo"
+        }
+        return clean in short_words or len(clean.split()) <= 2
     
     def generate_response(self, session_id: str, scammer_message: str, message_count: int) -> str:
         """
@@ -590,23 +748,36 @@ class HoneypotAgent:
         
         # Detect language preference
         lang = self._detect_language(scammer_message)
+        context["language"] = lang  # Store for session consistency
         
         # Track last tactic for continuity
         if tactics:
             context["last_tactic"] = tactics[-1]
         
-        # Update escalation level based on current message
+        # Track previous escalation level for guard logic
+        prev_escalation = context.get("escalation_level", 0)
+        
+        # Gradual escalation update based on current message
+        # Prevents jumping from calm to fearful instantly
         if "threat" in tactics or "digital_arrest" in tactics:
-            context["escalation_level"] = 3
-        elif "payment_request" in tactics and context["escalation_level"] < 2:
-            context["escalation_level"] = 2
-        elif context["escalation_level"] == 0 and tactics:
-            context["escalation_level"] = 1
+            # Threats escalate faster but still cap at +2 from current level
+            new_level = min(3, prev_escalation + 2)
+            context["escalation_level"] = max(context["escalation_level"], new_level)
+        elif "payment_request" in tactics:
+            context["escalation_level"] = max(context["escalation_level"], min(prev_escalation + 1, 2))
+        elif tactics:
+            context["escalation_level"] = max(context["escalation_level"], 1)
         
         escalation = context["escalation_level"]
         
+        # Handle short/vague messages - use follow-up responses to continue conversation
+        if self._is_short_message(scammer_message) and message_count > 1:
+            pool = self.HINDI_SHORT_FOLLOWUP_RESPONSES if lang == "hi" else self.SHORT_FOLLOWUP_RESPONSES
+        # When scammer confirms/insists after our doubt - show cautious acceptance
+        elif "confirmation_insist" in tactics and message_count > 1:
+            pool = self.HINDI_CONFIRMATION_DOUBT_RESPONSES if lang == "hi" else self.CONFIRMATION_DOUBT_RESPONSES
         # Dynamic response selection based on context, scam type, and language
-        if message_count <= 1:
+        elif message_count <= 1:
             pool = self.HINDI_INITIAL_RESPONSES if lang == "hi" else self.INITIAL_RESPONSES
         elif "digital_arrest" in tactics:
             pool = self.HINDI_DIGITAL_ARREST_RESPONSES if lang == "hi" else self.DIGITAL_ARREST_RESPONSES
@@ -618,11 +789,16 @@ class HoneypotAgent:
             pool = self.ACCOUNT_NUMBER_RESPONSES  # Already has Hindi mixed in
         elif "credential" in tactics:
             pool = self.HINDI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.TECH_CONFUSION_RESPONSES
-        elif escalation >= 3 or "threat" in tactics:
-            if message_count > 4 and random.random() > 0.4:
-                pool = self.HINDI_COMPLIANT_RESPONSES if lang == "hi" else self.COMPLIANT_RESPONSES
+        elif escalation >= 3 and "threat" in tactics:
+            # Only show fearful if we were already at escalation 2+ OR threats are repeated
+            if prev_escalation >= 2 or len([t for t in context.get("conversation_history", []) if "threat" in str(t)]) > 1:
+                if message_count > 4 and random.random() > 0.4:
+                    pool = self.HINDI_COMPLIANT_RESPONSES if lang == "hi" else self.COMPLIANT_RESPONSES
+                else:
+                    pool = self.HINDI_FEARFUL_RESPONSES if lang == "hi" else self.FEARFUL_RESPONSES
             else:
-                pool = self.HINDI_FEARFUL_RESPONSES if lang == "hi" else self.FEARFUL_RESPONSES
+                # First threat - show concern but not full fear
+                pool = self.HINDI_VERIFICATION_RESPONSES if lang == "hi" else self.VERIFICATION_RESPONSES
         elif context["intel_requested"] or message_count > 5:
             if random.random() > 0.5:
                 pool = self.HINDI_DETAIL_SEEKING if lang == "hi" else self.DETAIL_SEEKING
@@ -633,11 +809,12 @@ class HoneypotAgent:
             context["intel_requested"] = True
         elif "payment_lure" in tactics:
             pool = self.HINDI_PAYMENT_RESPONSES if lang == "hi" else self.PAYMENT_RESPONSES
-        elif "verification" in tactics:
+        elif "verification" in tactics or "impersonation" in tactics or "security_alert" in tactics:
             pool = self.HINDI_VERIFICATION_RESPONSES if lang == "hi" else self.VERIFICATION_RESPONSES
         elif "urgency" in tactics and escalation >= 1:
             pool = self.HINDI_STALLING_RESPONSES if lang == "hi" else self.STALLING_RESPONSES
         else:
+            # Default: mild confusion and stalling
             if random.random() > 0.5:
                 pool = self.HINDI_STALLING_RESPONSES if lang == "hi" else self.STALLING_RESPONSES
             else:
@@ -655,10 +832,117 @@ class HoneypotAgent:
         response = random.choice(available)
         context["responses_given"].append(response)
         
+        # Add hesitation and probing for realism
+        response = self._add_hesitation(response, lang)
+        response = self._add_probing(response, context, lang)
+        
+        # Update agent confidence based on tactics seen
+        self._update_confidence(context)
+        
         # Add to conversation history
         context["conversation_history"].append({"role": "agent", "text": response})
         
+        logger.debug(f"[AGENT] [{session_id[:8]}] stage={self.get_engagement_stage(session_id, message_count, True, False).get('stage')} escalation={escalation} lang={lang}")
+        
         return response
+    
+    def _add_hesitation(self, response: str, lang: str) -> str:
+        """Randomly prepend hesitation words for natural conversation flow."""
+        if random.random() < 0.30:  # 30% chance
+            pool = self.HESITATION_HI if lang == "hi" else self.HESITATION_EN
+            return random.choice(pool) + " " + response[0].lower() + response[1:]
+        return response
+    
+    def _add_probing(self, response: str, context: dict, lang: str) -> str:
+        """Sometimes append a probing question to extract more info from scammer."""
+        msg_count = len(context.get("conversation_history", []))
+        # Only probe after 3+ messages and 20% chance
+        if msg_count >= 3 and random.random() < 0.20:
+            pool = self.PROBING_HI if lang == "hi" else self.PROBING_EN
+            used = context.get("probes_used", [])
+            available = [p for p in pool if p not in used]
+            if available:
+                probe = random.choice(available)
+                context["probes_used"].append(probe)
+                return response + " " + probe
+        return response
+    
+    def _update_confidence(self, context: dict) -> None:
+        """Update agent's internal confidence score based on accumulated evidence.
+        
+        This affects conversational TONE only. It does NOT affect:
+        - Risk score calculation (detector handles that)
+        - Scam detection threshold (detector handles that)
+        - Intelligence extraction (extractor handles that)
+        - Callback decisions (callback module handles that)
+        """
+        tactics = context.get("detected_tactics", set())
+        msg_count = len(context.get("conversation_history", []))
+        
+        confidence = 0.0
+        # Each tactic type adds confidence
+        if "urgency" in tactics: confidence += 0.1
+        if "verification" in tactics: confidence += 0.1
+        if "payment_lure" in tactics: confidence += 0.15
+        if "threat" in tactics: confidence += 0.2
+        if "payment_request" in tactics: confidence += 0.2
+        if "digital_arrest" in tactics: confidence += 0.25
+        if "otp_request" in tactics: confidence += 0.2
+        if "account_request" in tactics: confidence += 0.15
+        if "credential" in tactics: confidence += 0.2
+        if "courier" in tactics: confidence += 0.15
+        
+        # More messages = more confidence (capped)
+        confidence += min(msg_count * 0.03, 0.15)
+        
+        context["agent_confidence"] = min(confidence, 1.0)
+    
+    def get_engagement_stage(self, session_id: str, msg_count: int, 
+                              scam_confirmed: bool, callback_sent: bool) -> dict:
+        """
+        Determine the current engagement stage with detailed info.
+        
+        Returns dict with: stage, label, description, progress (0-100)
+        Used by API response and frontend stage visualization.
+        """
+        context = self._get_context(session_id)
+        escalation = context.get("escalation_level", 0)
+        intel_requested = context.get("intel_requested", False)
+        tactics = context.get("detected_tactics", set())
+        
+        if callback_sent:
+            stage_id = "intelligence_reported"
+        elif intel_requested and scam_confirmed and msg_count >= 6:
+            stage_id = "intelligence_extraction"
+        elif scam_confirmed and msg_count >= 4:
+            stage_id = "deep_engagement"
+        elif intel_requested:
+            stage_id = "information_gathering"
+        elif "threat" in tactics or "urgency" in tactics or escalation >= 2:
+            stage_id = "urgency_response"
+        elif scam_confirmed:
+            stage_id = "scam_confirmed"
+        elif msg_count >= 2:
+            stage_id = "rapport_building"
+        else:
+            stage_id = "initial_contact"
+        
+        stage_info = ENGAGEMENT_STAGES.get(stage_id, ENGAGEMENT_STAGES["initial_contact"])
+        return {
+            "stage": stage_id,
+            "label": stage_info["label"],
+            "description": stage_info["description"],
+            "progress": stage_info["progress"],
+            "escalation_level": escalation,
+            "agent_confidence": context.get("agent_confidence", 0.0),
+            "tactics_seen": list(tactics),
+            "messages_exchanged": msg_count,
+        }
+    
+    def get_agent_confidence(self, session_id: str) -> float:
+        """Return the agent's current confidence that this is a scam."""
+        context = self._get_context(session_id)
+        return context.get("agent_confidence", 0.0)
     
     def generate_agent_notes(self, session_id: str, total_messages: int, 
                              intelligence: dict, 
@@ -760,7 +1044,8 @@ class HoneypotAgent:
         """
         Generate a neutral response for non-scam or uncertain cases.
         
-        Returns a cautious, human-like reply without revealing detection status.
+        Returns a cautious but engaged, human-like reply without revealing detection status.
+        Keeps the conversation open so the scammer stays engaged if it IS a scam.
         """
         context = self._get_context(session_id)
         
@@ -768,11 +1053,20 @@ class HoneypotAgent:
         if scammer_message:
             tactics = self._detect_tactics(scammer_message)
             context["detected_tactics"].update(tactics)
-            context["conversation_history"].append({"role": "scammer", "text": scammer_message})
+            # NOTE: scammer message is already appended by get_reply() - don't double-append
         
-        available = [r for r in self.NEUTRAL_RESPONSES if r not in context["responses_given"]]
+        # Detect language for response selection
+        lang = self._detect_language(scammer_message) if scammer_message else "en"
+        
+        # Check if this is a short/vague message - respond with follow-up
+        if scammer_message and self._is_short_message(scammer_message):
+            pool = self.HINDI_SHORT_FOLLOWUP_RESPONSES if lang == "hi" else self.SHORT_FOLLOWUP_RESPONSES
+        else:
+            pool = self.HINDI_NEUTRAL_RESPONSES if lang == "hi" else self.NEUTRAL_RESPONSES
+        
+        available = [r for r in pool if r not in context["responses_given"]]
         if not available:
-            available = self.NEUTRAL_RESPONSES
+            available = pool
         
         response = random.choice(available)
         context["responses_given"].append(response)

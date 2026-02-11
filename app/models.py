@@ -85,8 +85,26 @@ class HoneypotResponse(BaseModel):
     confidence: Optional[float] = None
     scam_type: Optional[str] = None
     scam_stage: Optional[str] = None
+    stage_info: Optional[dict] = None  # Detailed stage: {stage, label, description, progress, ...}
     intelligence_counts: Optional[dict] = None
     callback_sent: Optional[bool] = None
+
+
+class SimulationRequest(BaseModel):
+    """Request to run an autonomous scam simulation."""
+    scenario_id: str = Field(..., description="ID of the demo scenario to run")
+    response_mode: str = Field(default="rule_based", description="rule_based or llm")
+
+
+class SimulationResponse(BaseModel):
+    """Full simulation result with conversation and analysis."""
+    simulation_id: str
+    scenario: dict
+    conversation: List[dict]
+    stage_progression: List[dict]
+    final_analysis: dict
+    total_messages: int
+    response_mode: str
 
 
 class CallbackPayload(BaseModel):

@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { sendMessage } from "../api";
+import { sendMessage, fetchScenarios, runSimulation } from "../api";
 import {
   Send,
   AlertTriangle,
@@ -13,6 +13,11 @@ import {
   ChevronRight,
   Info,
   Activity,
+  Play,
+  Square,
+  Zap,
+  Target,
+  TrendingUp,
 } from "lucide-react";
 
 /* ── tiny id helper ── */
@@ -118,6 +123,219 @@ function RiskBar({ level, score }) {
   );
 }
 
+/* ── Stage Progress Indicator ── */
+function StageProgress({ stageInfo }) {
+  if (!stageInfo) return null;
+  const progress = stageInfo.progress || 0;
+  const stageColors = {
+    initial_contact: "from-slate-500 to-slate-400",
+    rapport_building: "from-blue-500 to-cyan-400",
+    urgency_response: "from-amber-500 to-orange-400",
+    scam_confirmed: "from-orange-500 to-red-400",
+    information_gathering: "from-purple-500 to-pink-400",
+    deep_engagement: "from-red-500 to-rose-400",
+    intelligence_extraction: "from-emerald-500 to-teal-400",
+    intelligence_reported: "from-green-500 to-emerald-400",
+  };
+  const gradient =
+    stageColors[stageInfo.stage] || "from-slate-500 to-slate-400";
+
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <Target size={12} className="text-blue-400" />
+          <span
+            className="text-xs font-medium"
+            style={{ color: "var(--text-heading)" }}>
+            Engagement Stage
+          </span>
+        </div>
+        <span className="text-[10px] font-mono text-blue-400">{progress}%</span>
+      </div>
+
+      {/* Progress bar */}
+      <div
+        className="h-2 rounded-full overflow-hidden"
+        style={{ background: "var(--bar-track)" }}>
+        <div
+          className={`h-full rounded-full bg-gradient-to-r ${gradient} transition-all duration-700`}
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
+      {/* Stage label */}
+      <div className="flex items-center justify-between">
+        <span
+          className="text-xs font-medium"
+          style={{ color: "var(--text-secondary)" }}>
+          {stageInfo.label}
+        </span>
+        {stageInfo.agent_confidence > 0 && (
+          <span className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+            Agent conf: {(stageInfo.agent_confidence * 100).toFixed(0)}%
+          </span>
+        )}
+      </div>
+
+      {/* Description */}
+      <p className="text-[10px]" style={{ color: "var(--text-muted)" }}>
+        {stageInfo.description}
+      </p>
+
+      {/* Tactics seen */}
+      {stageInfo.tactics_seen && stageInfo.tactics_seen.length > 0 && (
+        <div className="flex flex-wrap gap-1 mt-1">
+          {stageInfo.tactics_seen.map((t) => (
+            <span
+              key={t}
+              className="px-1.5 py-0.5 rounded text-[9px] font-medium bg-red-500/10 text-red-400 border border-red-500/10">
+              {t.replace(/_/g, " ")}
+            </span>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Scenario Selector Dropdown ── */
+function ScenarioSelector({ scenarios, onSelect, loading, disabled }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const diffColors = {
+    easy: "text-emerald-400",
+    medium: "text-amber-400",
+    hard: "text-red-400",
+  };
+
+  return (
+    <div className="relative" ref={ref}>
+      <button
+        onClick={() => !disabled && setOpen((o) => !o)}
+        disabled={disabled || loading}
+        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-gradient-to-r from-emerald-600/80 to-teal-600/80 text-white hover:shadow-lg hover:shadow-emerald-500/20 disabled:opacity-40"
+        title="Run auto-simulation with a demo scenario">
+        {loading ?
+          <Loader2 size={13} className="animate-spin" />
+        : <Play size={13} />}
+        Simulate
+      </button>
+
+      {open && (
+        <div
+          className="absolute right-0 top-full mt-1 w-72 rounded-xl border shadow-xl z-50 overflow-hidden"
+          style={{
+            background: "var(--bg-primary)",
+            borderColor: "var(--border-primary)",
+          }}>
+          <div
+            className="px-3 py-2 border-b"
+            style={{ borderColor: "var(--border-primary)" }}>
+            <span
+              className="text-xs font-semibold"
+              style={{ color: "var(--text-heading)" }}>
+              Demo Scenarios
+            </span>
+          </div>
+          {scenarios.map((s) => (
+            <button
+              key={s.id}
+              onClick={() => {
+                setOpen(false);
+                onSelect(s.id);
+              }}
+              className="w-full text-left px-3 py-2.5 hover:bg-blue-500/5 transition-colors border-b last:border-0"
+              style={{ borderColor: "var(--border-primary)" }}>
+              <div className="flex items-center justify-between">
+                <span
+                  className="text-xs font-medium"
+                  style={{ color: "var(--text-heading)" }}>
+                  {s.name}
+                </span>
+                <span
+                  className={`text-[10px] ${diffColors[s.difficulty] || ""}`}>
+                  {s.difficulty}
+                </span>
+              </div>
+              <p
+                className="text-[10px] mt-0.5 line-clamp-2"
+                style={{ color: "var(--text-muted)" }}>
+                {s.description}
+              </p>
+              <div className="flex items-center gap-2 mt-1">
+                <span
+                  className="text-[9px] px-1.5 py-0.5 rounded-full border"
+                  style={{
+                    color: "var(--text-tertiary)",
+                    borderColor: "var(--border-primary)",
+                  }}>
+                  {s.language === "hi" ? "Hindi" : "English"}
+                </span>
+                <span
+                  className="text-[9px]"
+                  style={{ color: "var(--text-tertiary)" }}>
+                  {s.message_count} messages
+                </span>
+              </div>
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+/* ── Stage Progression Timeline (simulation mode) ── */
+function StageTimeline({ stages }) {
+  if (!stages || stages.length === 0) return null;
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <TrendingUp size={12} className="text-emerald-400" />
+        <span
+          className="text-xs font-medium"
+          style={{ color: "var(--text-heading)" }}>
+          Stage Progression
+        </span>
+      </div>
+      <div className="space-y-1">
+        {stages.map((s, i) => (
+          <div key={i} className="flex items-center gap-2">
+            <span
+              className="text-[10px] font-mono w-5 text-right"
+              style={{ color: "var(--text-muted)" }}>
+              {s.step}
+            </span>
+            <div
+              className="flex-1 h-1.5 rounded-full overflow-hidden"
+              style={{ background: "var(--bar-track)" }}>
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-blue-500 to-emerald-500 transition-all duration-500"
+                style={{ width: `${s.progress}%` }}
+              />
+            </div>
+            <span
+              className="text-[10px] w-20 truncate"
+              style={{ color: "var(--text-tertiary)" }}>
+              {s.label}
+            </span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
 export default function SessionView() {
   const [sessionId, setSessionId] = useState(uid());
   const [messages, setMessages] = useState([]);
@@ -128,15 +346,27 @@ export default function SessionView() {
   const [showPanel, setShowPanel] = useState(false);
   const chatEnd = useRef(null);
 
+  // Auto-simulation state
+  const [scenarios, setScenarios] = useState([]);
+  const [simulating, setSimulating] = useState(false);
+  const [simStages, setSimStages] = useState([]);
+
   const scrollToBottom = useCallback(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
   }, []);
 
   useEffect(scrollToBottom, [messages, scrollToBottom]);
 
+  // Load available scenarios on mount
+  useEffect(() => {
+    fetchScenarios()
+      .then(setScenarios)
+      .catch(() => setScenarios([]));
+  }, []);
+
   const handleSend = async () => {
     const text = input.trim();
-    if (!text || loading) return;
+    if (!text || loading || simulating) return;
 
     const userMsg = { id: uid(), sender: "scammer", text, ts: Date.now() };
     setMessages((prev) => [...prev, userMsg]);
@@ -171,10 +401,70 @@ export default function SessionView() {
     }
   };
 
+  /* ── Auto-simulation handler ── */
+  const handleSimulate = async (scenarioId) => {
+    if (simulating || loading) return;
+
+    // Reset state
+    handleNewSession();
+    setSimulating(true);
+    setSimStages([]);
+    setShowPanel(true);
+
+    try {
+      const result = await runSimulation(scenarioId, mode);
+
+      // Display messages one by one with delay for typing effect
+      const conv = result.conversation || [];
+      for (let i = 0; i < conv.length; i++) {
+        const m = conv[i];
+        await new Promise((r) =>
+          setTimeout(r, m.sender === "scammer" ? 800 : 500),
+        );
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: uid(),
+            sender: m.sender,
+            text: m.text,
+            ts: Date.now(),
+            source: m.reply_source || undefined,
+            simStep: m.step,
+          },
+        ]);
+      }
+
+      // Set analysis and stage progression
+      if (result.final_analysis) {
+        setAnalysis({
+          ...result.final_analysis,
+          stage_info:
+            result.stage_progression?.length > 0 ?
+              result.stage_progression[result.stage_progression.length - 1]
+            : null,
+        });
+      }
+      setSimStages(result.stage_progression || []);
+    } catch (err) {
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: uid(),
+          sender: "system",
+          text: `Simulation error: ${err.message}`,
+          ts: Date.now(),
+        },
+      ]);
+    } finally {
+      setSimulating(false);
+    }
+  };
+
   const handleNewSession = () => {
     setSessionId(uid());
     setMessages([]);
     setAnalysis(null);
+    setSimStages([]);
   };
 
   const onKeyDown = (e) => {
@@ -206,6 +496,12 @@ export default function SessionView() {
           </div>
           <div className="flex items-center gap-3">
             <ModeSlider mode={mode} onChange={setMode} />
+            <ScenarioSelector
+              scenarios={scenarios}
+              onSelect={handleSimulate}
+              loading={simulating}
+              disabled={loading}
+            />
             <button
               onClick={handleNewSession}
               className="p-2 rounded-lg transition-colors"
@@ -238,8 +534,9 @@ export default function SessionView() {
               <p
                 className="text-sm max-w-sm"
                 style={{ color: "var(--text-tertiary)" }}>
-                Type a scam message to begin. The honeypot agent will respond
-                with realistic human-like replies while extracting intelligence.
+                Type a scam message to begin, or click{" "}
+                <span className="text-emerald-400 font-medium">Simulate</span>{" "}
+                to run a full demo scenario automatically.
               </p>
             </div>
           )}
@@ -281,13 +578,13 @@ export default function SessionView() {
             </div>
           ))}
 
-          {loading && (
+          {(loading || simulating) && (
             <div className="flex items-center gap-2 text-blue-400 animate-fade-in">
               <div className="w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
                 <Loader2 size={14} className="animate-spin" />
               </div>
               <span className="text-xs text-slate-400">
-                Agent is analyzing...
+                {simulating ? "Simulation running..." : "Agent is analyzing..."}
               </span>
             </div>
           )}
@@ -303,17 +600,21 @@ export default function SessionView() {
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
-              placeholder="Type a scam message to test..."
+              placeholder={
+                simulating ?
+                  "Simulation in progress..."
+                : "Type a scam message to test..."
+              }
               className="flex-1 bg-transparent text-sm outline-none"
               style={{
                 color: "var(--text-primary)",
                 "--tw-placeholder-color": "var(--input-placeholder)",
               }}
-              disabled={loading}
+              disabled={loading || simulating}
             />
             <button
               onClick={handleSend}
-              disabled={loading || !input.trim()}
+              disabled={loading || simulating || !input.trim()}
               className="p-2 rounded-lg bg-gradient-to-r from-blue-600 to-purple-600 text-white disabled:opacity-40 transition-all hover:shadow-lg hover:shadow-blue-500/20">
               <Send size={14} />
             </button>
@@ -345,6 +646,13 @@ export default function SessionView() {
               Send a message to see analysis.
             </p>
           : <>
+              {/* Stage Progress */}
+              {analysis.stage_info && (
+                <div className="glass rounded-xl p-3">
+                  <StageProgress stageInfo={analysis.stage_info} />
+                </div>
+              )}
+
               {/* Risk */}
               <div className="glass rounded-xl p-3">
                 <RiskBar
@@ -381,7 +689,7 @@ export default function SessionView() {
                     style={{ color: "var(--text-tertiary)" }}>
                     Stage:{" "}
                     <span style={{ color: "var(--text-secondary)" }}>
-                      {analysis.scam_stage}
+                      {analysis.scam_stage.replace(/_/g, " ")}
                     </span>
                   </div>
                 )}
@@ -427,6 +735,13 @@ export default function SessionView() {
                       ),
                     )}
                   </div>
+                </div>
+              )}
+
+              {/* Stage Progression Timeline (from simulation) */}
+              {simStages.length > 0 && (
+                <div className="glass rounded-xl p-3">
+                  <StageTimeline stages={simStages} />
                 </div>
               )}
 

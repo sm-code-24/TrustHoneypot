@@ -63,3 +63,23 @@ export async function fetchSystemStatus() {
   if (!res.ok) throw new Error(`API error: ${res.status}`);
   return res.json();
 }
+
+export async function fetchScenarios() {
+  const res = await fetch(`${API_BASE}/scenarios`, { headers: headers() });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  const data = await res.json();
+  return data.scenarios || [];
+}
+
+export async function runSimulation(scenarioId, responseMode = "rule_based") {
+  const res = await fetch(`${API_BASE}/simulate`, {
+    method: "POST",
+    headers: headers(),
+    body: JSON.stringify({
+      scenario_id: scenarioId,
+      response_mode: responseMode,
+    }),
+  });
+  if (!res.ok) throw new Error(`API error: ${res.status}`);
+  return res.json();
+}

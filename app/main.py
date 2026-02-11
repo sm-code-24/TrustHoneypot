@@ -27,7 +27,9 @@ import time
 
 from models import (
     HoneypotRequest,
-    HoneypotResponse
+    HoneypotResponse,
+    SimulationRequest,
+    SimulationResponse,
 )
 from auth import verify_api_key
 from detector import detector
@@ -37,6 +39,7 @@ from memory import memory
 from callback import send_final_callback, should_send_callback
 from llm import llm_service
 from db import db_service
+from simulator import simulator
 
 # Set up logging so we can see what's happening
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -165,16 +168,23 @@ async def process_message(
         
         # Log full request body in one line
         request_dict = request.model_dump()
-        logger.info(f"[{session_id[:8]}] REQUEST: {json.dumps(request_dict, ensure_ascii=False)}")
+        logger.info(f"[SESSION] [{session_id[:8]}] REQUEST: {json.dumps(request_dict, ensure_ascii=False)}")
         
         # Process conversation history for context
         # First, update agent's context awareness from history
         agent.process_conversation_history(session_id, request.conversationHistory)
         
-        for hist_msg in request.conversationHistory:
+        # Only process NEW history messages through detector/extractor
+        # (avoid re-scoring the same messages on every request, which inflates risk scores)
+        _history_key = f"_detector_hist_{session_id}"
+        _already_processed = memory.sessions.get(session_id, {}).get("_detector_history_count", 0)
+        _new_history = request.conversationHistory[_already_processed:]
+        for hist_msg in _new_history:
             if hist_msg.sender == "scammer":
                 detector.calculate_risk_score(hist_msg.text, session_id)
                 extractor.extract(hist_msg.text, session_id)
+        memory.create_session(session_id)
+        memory.sessions[session_id]["_detector_history_count"] = len(request.conversationHistory)
         
         memory.add_message(session_id, "scammer", current_message)
         
@@ -194,16 +204,20 @@ async def process_message(
         agent_reply = agent.get_reply(session_id, current_message, msg_count, scam_confirmed)
         reply_source = "rule_based"
         
-        # If LLM mode requested and scam confirmed, try LLM rephrasing
-        if response_mode == "llm" and scam_confirmed:
+        # If LLM mode requested, try LLM rephrasing (works for ALL replies, not just confirmed scams)
+        if response_mode == "llm":
             strategy = agent.get_current_strategy(session_id)
-            llm_reply, llm_source = await llm_service.rephrase_reply(
-                strategy=strategy,
-                rule_reply=agent_reply,
-                scammer_message=current_message
-            )
-            agent_reply = llm_reply
-            reply_source = llm_source
+            try:
+                llm_reply, llm_source = await llm_service.rephrase_reply(
+                    strategy=strategy,
+                    rule_reply=agent_reply,
+                    scammer_message=current_message
+                )
+                agent_reply = llm_reply
+                reply_source = llm_source
+            except Exception as llm_err:
+                logger.warning(f"[{session_id[:8]}] [LLM] Rephrase failed: {llm_err}, using rule-based")
+                reply_source = "rule_based_fallback"
         
         memory.set_agent_response(session_id, agent_reply)
         memory.add_message(session_id, "agent", agent_reply)
@@ -279,6 +293,8 @@ async def process_message(
         )
         
         # Build response (status, reply, plus enriched metadata for UI)
+        stage_info = agent.get_engagement_stage(session_id, msg_count, scam_confirmed, callback_sent)
+        
         response = HoneypotResponse(
             status="success",
             reply=agent_reply,
@@ -288,7 +304,8 @@ async def process_message(
             risk_level=detection_details.risk_level,
             confidence=detection_details.confidence,
             scam_type=detection_details.scam_type or "unknown",
-            scam_stage=_get_scam_stage(msg_count, scam_confirmed, callback_sent),
+            scam_stage=stage_info["stage"],
+            stage_info=stage_info,
             intelligence_counts=intel_counts,
             callback_sent=memory.is_callback_sent(session_id),
         )
@@ -310,12 +327,12 @@ async def process_message(
             },
             "agentNotes": agent_notes
         }
-        logger.info(f"[{session_id[:8]}] INTERNAL: {json.dumps(internal_log, ensure_ascii=False)}")
+        logger.info(f"[AGENT] [{session_id[:8]}] INTERNAL: {json.dumps(internal_log, ensure_ascii=False)}")
         
         # Log simplified response
         response_dict = response.model_dump()
-        logger.info(f"[{session_id[:8]}] RESPONSE: {json.dumps(response_dict, ensure_ascii=False)}")
-        logger.info(f"[{session_id[:8]}] CALLBACK: {'sent' if callback_sent else 'not sent'}")
+        logger.info(f"[SESSION] [{session_id[:8]}] RESPONSE: {json.dumps(response_dict, ensure_ascii=False)}")
+        logger.info(f"[CALLBACK] [{session_id[:8]}] {'SENT' if callback_sent else 'not_sent'}")
         
         return response
         
@@ -325,7 +342,7 @@ async def process_message(
 
 
 def _get_scam_stage(msg_count: int, scam_confirmed: bool, callback_sent: bool) -> str:
-    """Determine the scam lifecycle stage."""
+    """Determine the scam lifecycle stage (legacy helper, prefer agent.get_engagement_stage)."""
     if callback_sent:
         return "intelligence_reported"
     if scam_confirmed and msg_count >= 5:
@@ -335,6 +352,138 @@ def _get_scam_stage(msg_count: int, scam_confirmed: bool, callback_sent: bool) -
     if msg_count >= 2:
         return "monitoring"
     return "initial_contact"
+
+
+# ─── Simulation Endpoints ─────────────────────────────────────────────────────
+
+@app.get("/scenarios")
+async def get_scenarios(api_key: str = Depends(verify_api_key)):
+    """List available demo scam scenarios for auto-simulation."""
+    return {"scenarios": simulator.get_scenarios()}
+
+
+@app.post("/simulate", response_model=SimulationResponse)
+async def run_simulation(
+    request: SimulationRequest,
+    api_key: str = Depends(verify_api_key)
+):
+    """
+    Run an autonomous scam simulation with a predefined scenario.
+    
+    The simulation processes each scammer message through the full honeypot
+    pipeline (detection → agent response → extraction → callback check).
+    Returns the complete conversation with stage progression and analysis.
+    """
+    import json as _json
+    
+    scenario = simulator.get_scenario(request.scenario_id)
+    if not scenario:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Scenario '{request.scenario_id}' not found. Use GET /scenarios for available options."
+        )
+    
+    async def honeypot_handler(session_id, message_text, history, response_mode):
+        """Internal handler that mirrors /honeypot logic for simulation."""
+        from models import Message
+        
+        # Build message history objects
+        history_msgs = [Message(sender=h["sender"], text=h["text"]) for h in history]
+        
+        # Process conversation history (only new messages)
+        agent.process_conversation_history(session_id, history_msgs)
+        
+        _already = memory.sessions.get(session_id, {}).get("_detector_history_count", 0)
+        for hist_msg in history_msgs[_already:]:
+            if hist_msg.sender == "scammer":
+                detector.calculate_risk_score(hist_msg.text, session_id)
+                extractor.extract(hist_msg.text, session_id)
+        memory.create_session(session_id)
+        memory.sessions[session_id]["_detector_history_count"] = len(history_msgs)
+        
+        memory.add_message(session_id, "scammer", message_text)
+        
+        # Analyze current message
+        risk_score, is_scam = detector.calculate_risk_score(message_text, session_id)
+        detection_details = detector.get_detection_details(session_id)
+        
+        if is_scam and not memory.is_scam_confirmed(session_id):
+            memory.mark_scam_confirmed(session_id)
+        
+        scam_confirmed = memory.is_scam_confirmed(session_id)
+        msg_count = len(history) + 1
+        
+        # Generate agent reply
+        agent_reply = agent.get_reply(session_id, message_text, msg_count, scam_confirmed)
+        reply_source = "rule_based"
+        
+        # LLM rephrasing if requested
+        if response_mode == "llm":
+            strategy = agent.get_current_strategy(session_id)
+            try:
+                llm_reply, llm_source = await llm_service.rephrase_reply(
+                    strategy=strategy,
+                    rule_reply=agent_reply,
+                    scammer_message=message_text
+                )
+                agent_reply = llm_reply
+                reply_source = llm_source
+            except Exception:
+                reply_source = "rule_based_fallback"
+        
+        memory.set_agent_response(session_id, agent_reply)
+        memory.add_message(session_id, "agent", agent_reply)
+        
+        # Extract intelligence
+        intelligence = extractor.extract(message_text, session_id)
+        intel_counts = {
+            "upiIds": len(intelligence.get("upiIds", [])),
+            "phoneNumbers": len(intelligence.get("phoneNumbers", [])),
+            "bankAccounts": len(intelligence.get("bankAccounts", [])),
+            "phishingLinks": len(intelligence.get("phishingLinks", [])),
+            "emails": len(intelligence.get("emails", [])),
+            "suspiciousKeywords": len(intelligence.get("suspiciousKeywords", [])),
+        }
+        
+        # Check callback
+        total_messages = len(history) + 1
+        callback_sent = False
+        callback_eligible = should_send_callback(scam_confirmed, total_messages, intelligence)
+        if callback_eligible and not memory.is_callback_sent(session_id):
+            agent_notes = agent.generate_agent_notes(session_id, total_messages, intelligence, detection_details)
+            success = send_final_callback(session_id, total_messages, intelligence, agent_notes)
+            if success:
+                memory.mark_callback_sent(session_id)
+                callback_sent = True
+        
+        stage_info = agent.get_engagement_stage(session_id, msg_count, scam_confirmed, callback_sent or memory.is_callback_sent(session_id))
+        
+        return {
+            "reply": agent_reply,
+            "reply_source": reply_source,
+            "scam_detected": scam_confirmed,
+            "risk_score": risk_score,
+            "risk_level": detection_details.risk_level,
+            "confidence": detection_details.confidence,
+            "scam_type": detection_details.scam_type or "unknown",
+            "scam_stage": stage_info["stage"],
+            "stage_info": stage_info,
+            "intelligence_counts": intel_counts,
+            "callback_sent": callback_sent or memory.is_callback_sent(session_id),
+        }
+    
+    logger.info(f"[SIMULATION] Request: scenario={request.scenario_id} mode={request.response_mode}")
+    
+    result = await simulator.run_simulation(
+        scenario_id=request.scenario_id,
+        response_mode=request.response_mode,
+        honeypot_handler=honeypot_handler,
+    )
+    
+    if "error" in result:
+        raise HTTPException(status_code=400, detail=result["error"])
+    
+    return result
 
 
 # ─── Read-Only Endpoints for UI ──────────────────────────────────────────────
