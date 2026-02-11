@@ -37,7 +37,11 @@ export default function PatternsView() {
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       <div className="flex items-center gap-2">
         <GitBranch size={18} className="text-purple-400" />
-        <h2 className="text-lg font-semibold text-white">Scam Patterns</h2>
+        <h2
+          className="text-lg font-semibold"
+          style={{ color: "var(--text-heading)" }}>
+          Scam Patterns
+        </h2>
       </div>
 
       <div className="grid md:grid-cols-2 gap-5">
@@ -45,25 +49,33 @@ export default function PatternsView() {
         <div className="glass rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <BarChart size={14} className="text-blue-400" />
-            <h3 className="text-sm font-semibold text-white">
+            <h3
+              className="text-sm font-semibold"
+              style={{ color: "var(--text-heading)" }}>
               Scam Type Distribution
             </h3>
           </div>
           <div className="space-y-3">
             {scamTypes.length === 0 && (
-              <p className="text-xs text-slate-500">No pattern data yet.</p>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                No pattern data yet.
+              </p>
             )}
             {scamTypes.map((s) => {
               const pct = ((s.count / maxTypeCount) * 100).toFixed(0);
               return (
                 <div key={s._id} className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-300">
+                    <span style={{ color: "var(--text-secondary)" }}>
                       {(s._id || "unknown").replace(/_/g, " ")}
                     </span>
-                    <span className="text-slate-400">{s.count}</span>
+                    <span style={{ color: "var(--text-tertiary)" }}>
+                      {s.count}
+                    </span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-1.5 rounded-full overflow-hidden"
+                    style={{ background: "var(--bar-track)" }}>
                     <div
                       className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-700"
                       style={{ width: `${pct}%` }}
@@ -79,13 +91,17 @@ export default function PatternsView() {
         <div className="glass rounded-xl p-5">
           <div className="flex items-center gap-2 mb-4">
             <AlertTriangle size={14} className="text-amber-400" />
-            <h3 className="text-sm font-semibold text-white">
+            <h3
+              className="text-sm font-semibold"
+              style={{ color: "var(--text-heading)" }}>
               Risk Level Distribution
             </h3>
           </div>
           <div className="space-y-3">
             {riskDist.length === 0 && (
-              <p className="text-xs text-slate-500">No risk data yet.</p>
+              <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+                No risk data yet.
+              </p>
             )}
             {riskDist.map((r) => {
               const total =
@@ -102,12 +118,16 @@ export default function PatternsView() {
               return (
                 <div key={r._id} className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span className="text-slate-300">
+                    <span style={{ color: "var(--text-secondary)" }}>
                       {(r._id || "unknown").toUpperCase()}
                     </span>
-                    <span className="text-slate-400">{pct}%</span>
+                    <span style={{ color: "var(--text-tertiary)" }}>
+                      {pct}%
+                    </span>
                   </div>
-                  <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+                  <div
+                    className="h-1.5 rounded-full overflow-hidden"
+                    style={{ background: "var(--bar-track)" }}>
                     <div
                       className={`h-full rounded-full bg-gradient-to-r ${bc} transition-all duration-700`}
                       style={{ width: `${pct}%` }}
@@ -124,28 +144,42 @@ export default function PatternsView() {
       <div className="glass rounded-xl p-5">
         <div className="flex items-center gap-2 mb-4">
           <Shield size={14} className="text-emerald-400" />
-          <h3 className="text-sm font-semibold text-white">
+          <h3
+            className="text-sm font-semibold"
+            style={{ color: "var(--text-heading)" }}>
             Top Detected Tactics
           </h3>
         </div>
         <div className="grid sm:grid-cols-2 gap-3">
           {topTactics.length === 0 && (
-            <p className="text-xs text-slate-500">No tactic data yet.</p>
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+              No tactic data yet.
+            </p>
           )}
           {topTactics.map((t, i) => {
             const pct = ((t.count / maxTacticCount) * 100).toFixed(0);
             return (
               <div
                 key={t._id || i}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800/40 border border-slate-700/30">
-                <span className="text-xs font-mono text-slate-500 w-5">
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg border"
+                style={{
+                  background: "var(--bg-tertiary)",
+                  borderColor: "var(--border-primary)",
+                }}>
+                <span
+                  className="text-xs font-mono w-5"
+                  style={{ color: "var(--text-muted)" }}>
                   #{i + 1}
                 </span>
                 <div className="flex-1 min-w-0">
-                  <div className="text-sm text-slate-300 truncate">
+                  <div
+                    className="text-sm truncate"
+                    style={{ color: "var(--text-secondary)" }}>
                     {(t._id || "unknown").replace(/_/g, " ")}
                   </div>
-                  <div className="h-1 rounded-full bg-slate-700 mt-1 overflow-hidden">
+                  <div
+                    className="h-1 rounded-full mt-1 overflow-hidden"
+                    style={{ background: "var(--bar-track)" }}>
                     <div
                       className="h-full rounded-full bg-emerald-500 transition-all duration-700"
                       style={{ width: `${pct}%` }}

@@ -6,26 +6,27 @@ import {
   BarChart3,
   GitBranch,
   Send,
-  Settings,
   Users,
   Menu,
   X,
   ChevronLeft,
+  Sun,
+  Moon,
 } from "lucide-react";
+import { useTheme } from "../ThemeContext";
 
 import SessionView from "./SessionView";
 import IntelligenceView from "./IntelligenceView";
 import PatternsView from "./PatternsView";
 import CallbacksView from "./CallbacksView";
-import SettingsView from "./SettingsView";
 import AboutView from "./AboutView";
+import TechDocsView from "./TechDocsView";
 
 const NAV_ITEMS = [
   { to: "session", icon: MessageSquare, label: "Session" },
   { to: "intelligence", icon: BarChart3, label: "Intelligence" },
   { to: "patterns", icon: GitBranch, label: "Patterns" },
   { to: "callbacks", icon: Send, label: "Callbacks" },
-  { to: "settings", icon: Settings, label: "Settings" },
   { to: "about", icon: Users, label: "About" },
 ];
 
@@ -33,12 +34,13 @@ export default function Dashboard() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const navigate = useNavigate();
   const year = new Date().getFullYear();
+  const { theme, toggle } = useTheme();
 
   const navLinkClass = ({ isActive }) =>
     `flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
       isActive ?
         "bg-blue-500/10 text-blue-400 glow-border"
-      : "text-slate-400 hover:text-slate-200 hover:bg-slate-800/50"
+      : "th-text-muted hover:th-text hover:bg-hover"
     }`;
 
   const SidebarContent = () => (
@@ -49,10 +51,14 @@ export default function Dashboard() {
           <Shield size={16} className="text-white" />
         </div>
         <div className="flex flex-col">
-          <span className="text-sm font-semibold text-white tracking-tight leading-none">
+          <span
+            className="text-sm font-semibold tracking-tight leading-none"
+            style={{ color: "var(--text-heading)" }}>
             Trust<span className="text-gradient">Honeypot</span>
           </span>
-          <span className="text-[10px] text-slate-500 font-mono mt-0.5">
+          <span
+            className="text-[10px] font-mono mt-0.5"
+            style={{ color: "var(--text-muted)" }}>
             COMMAND CENTER
           </span>
         </div>
@@ -72,11 +78,21 @@ export default function Dashboard() {
         ))}
       </nav>
 
-      {/* Back to landing */}
-      <div className="px-3 pb-4">
+      {/* Theme toggle + Back */}
+      <div className="px-3 pb-4 space-y-1">
+        <button
+          onClick={toggle}
+          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs transition-all"
+          style={{ color: "var(--text-muted)" }}>
+          {theme === "dark" ?
+            <Sun size={14} />
+          : <Moon size={14} />}
+          {theme === "dark" ? "Light Mode" : "Dark Mode"}
+        </button>
         <button
           onClick={() => navigate("/")}
-          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs text-slate-500 hover:text-slate-300 hover:bg-slate-800/40 transition-all">
+          className="flex items-center gap-2 w-full px-3 py-2 rounded-lg text-xs transition-all"
+          style={{ color: "var(--text-muted)" }}>
           <ChevronLeft size={14} />
           Back to Home
         </button>
@@ -85,9 +101,16 @@ export default function Dashboard() {
   );
 
   return (
-    <div className="flex h-screen bg-surface-950 overflow-hidden">
+    <div
+      className="flex h-screen overflow-hidden"
+      style={{ background: "var(--bg-primary)" }}>
       {/* Desktop sidebar */}
-      <aside className="hidden md:flex flex-col w-56 border-r border-slate-800/60 bg-gradient-to-b from-surface-800/50 to-surface-950/90 backdrop-blur-sm flex-shrink-0">
+      <aside
+        className="hidden md:flex flex-col w-56 border-r flex-shrink-0"
+        style={{
+          background: "var(--sidebar-bg)",
+          borderColor: "var(--border-primary)",
+        }}>
         <SidebarContent />
       </aside>
 
@@ -101,9 +124,13 @@ export default function Dashboard() {
 
       {/* Mobile sidebar drawer */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-60 bg-gradient-to-b from-surface-800/90 to-surface-950 border-r border-slate-800/60 flex flex-col transform transition-transform duration-300 ease-in-out md:hidden ${
+        className={`fixed inset-y-0 left-0 z-50 w-60 border-r flex flex-col transform transition-transform duration-300 ease-in-out md:hidden ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}>
+        }`}
+        style={{
+          background: "var(--sidebar-bg)",
+          borderColor: "var(--border-primary)",
+        }}>
         <div className="absolute top-3 right-3">
           <button
             onClick={() => setSidebarOpen(false)}
@@ -117,14 +144,22 @@ export default function Dashboard() {
       {/* Main content */}
       <div className="flex-1 flex flex-col min-w-0 overflow-hidden">
         {/* Top header */}
-        <header className="flex items-center justify-between px-4 md:px-6 h-12 border-b border-slate-800/50 bg-surface-950/80 backdrop-blur-sm flex-shrink-0">
+        <header
+          className="flex items-center justify-between px-4 md:px-6 h-12 border-b backdrop-blur-sm flex-shrink-0"
+          style={{
+            background: "var(--bg-card)",
+            borderColor: "var(--border-primary)",
+          }}>
           <div className="flex items-center gap-3">
             <button
               onClick={() => setSidebarOpen(true)}
-              className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800 md:hidden">
+              className="p-1.5 rounded-lg md:hidden"
+              style={{ color: "var(--text-tertiary)" }}>
               <Menu size={18} />
             </button>
-            <span className="text-sm font-medium text-slate-300 hidden sm:block">
+            <span
+              className="text-sm font-medium hidden sm:block"
+              style={{ color: "var(--text-secondary)" }}>
               TrustHoneypot
             </span>
           </div>
@@ -136,7 +171,9 @@ export default function Dashboard() {
               </span>
               <span className="text-xs text-emerald-400 font-medium">LIVE</span>
             </div>
-            <span className="text-[11px] font-mono text-slate-500">
+            <span
+              className="text-[11px] font-mono"
+              style={{ color: "var(--text-muted)" }}>
               AI Impact Buildathon — PS-2
             </span>
           </div>
@@ -150,16 +187,25 @@ export default function Dashboard() {
             <Route path="intelligence" element={<IntelligenceView />} />
             <Route path="patterns" element={<PatternsView />} />
             <Route path="callbacks" element={<CallbacksView />} />
-            <Route path="settings" element={<SettingsView />} />
+            <Route path="docs" element={<TechDocsView />} />
             <Route path="about" element={<AboutView />} />
           </Routes>
         </main>
 
         {/* Footer */}
-        <footer className="flex items-center justify-center h-9 border-t border-slate-800/40 bg-surface-950/90 flex-shrink-0">
-          <p className="text-[11px] text-slate-500">
+        <footer
+          className="flex items-center justify-center h-9 border-t flex-shrink-0"
+          style={{
+            background: "var(--bg-card)",
+            borderColor: "var(--border-primary)",
+          }}>
+          <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
             &copy; {year}{" "}
-            <span className="text-slate-400 font-medium">200 Hustlers</span>
+            <span
+              style={{ color: "var(--text-tertiary)" }}
+              className="font-medium">
+              200 Hustlers
+            </span>
             {" — "}TrustHoneypot — Made for AI Impact Buildathon PS-2
           </p>
         </footer>

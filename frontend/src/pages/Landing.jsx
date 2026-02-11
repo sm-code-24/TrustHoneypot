@@ -11,12 +11,29 @@ import {
   Fingerprint,
   Database,
 } from "lucide-react";
+import { useTheme } from "../ThemeContext";
 
 const CYCLE_WORDS = [
-  { text: "Engage", gradient: "from-blue-400 to-cyan-300" },
-  { text: "Extract", gradient: "from-purple-400 to-pink-300" },
-  { text: "Detect", gradient: "from-emerald-400 to-teal-300" },
-  { text: "Protect", gradient: "from-amber-400 to-orange-300" },
+  {
+    text: "Engage",
+    dark: "from-blue-400 to-cyan-300",
+    light: "from-blue-700 to-cyan-600",
+  },
+  {
+    text: "Extract",
+    dark: "from-purple-400 to-pink-300",
+    light: "from-purple-700 to-pink-600",
+  },
+  {
+    text: "Detect",
+    dark: "from-emerald-400 to-teal-300",
+    light: "from-emerald-700 to-teal-600",
+  },
+  {
+    text: "Protect",
+    dark: "from-amber-400 to-orange-300",
+    light: "from-amber-600 to-orange-600",
+  },
 ];
 
 const FEATURES = [
@@ -58,6 +75,7 @@ export default function Landing() {
   const year = new Date().getFullYear();
   const [wordIdx, setWordIdx] = useState(0);
   const [visible, setVisible] = useState(true);
+  const { theme, toggle } = useTheme();
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -71,17 +89,29 @@ export default function Landing() {
   }, []);
 
   const word = CYCLE_WORDS[wordIdx];
+  const gradient = theme === "light" ? word.light : word.dark;
 
   return (
-    <div className="relative min-h-screen overflow-hidden bg-[#020617]">
+    <div
+      className="relative min-h-screen overflow-hidden"
+      style={{ background: "var(--bg-primary)" }}>
       {/* Gradient mesh background */}
       <div className="absolute inset-0">
-        <div className="absolute inset-0 bg-gradient-to-b from-[#0c1527] via-[#020617] to-[#0a0a1a]" />
-        <div className="absolute top-[-25%] left-[-10%] w-[700px] h-[700px] rounded-full bg-blue-600/[0.07] blur-[120px] animate-float" />
-        <div className="absolute bottom-[-15%] right-[-5%] w-[600px] h-[600px] rounded-full bg-purple-600/[0.06] blur-[100px]" />
         <div
-          className="absolute top-[50%] right-[15%] w-[350px] h-[350px] rounded-full bg-cyan-500/[0.04] blur-[80px] animate-float"
-          style={{ animationDelay: "1.5s" }}
+          className="absolute inset-0"
+          style={{ background: "var(--page-gradient)" }}
+        />
+        <div
+          className="absolute top-[-25%] left-[-10%] w-[700px] h-[700px] rounded-full blur-[120px] animate-float"
+          style={{ background: "var(--landing-orb1)" }}
+        />
+        <div
+          className="absolute bottom-[-15%] right-[-5%] w-[600px] h-[600px] rounded-full blur-[100px]"
+          style={{ background: "var(--landing-orb2)" }}
+        />
+        <div
+          className="absolute top-[50%] right-[15%] w-[350px] h-[350px] rounded-full blur-[80px] animate-float"
+          style={{ animationDelay: "1.5s", background: "var(--landing-orb3)" }}
         />
         <div className="absolute inset-0 bg-grid opacity-30" />
       </div>
@@ -92,19 +122,74 @@ export default function Landing() {
           <div className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/25">
             <Shield size={18} className="text-white" />
           </div>
-          <span className="text-lg font-bold tracking-tight text-white">
+          <span
+            className="text-lg font-bold tracking-tight"
+            style={{ color: "var(--text-heading)" }}>
             Trust<span className="text-gradient">Honeypot</span>
           </span>
         </div>
-        <span className="hidden sm:block text-xs font-mono text-slate-500 tracking-wider">
-          AI IMPACT BUILDATHON — PS-2
-        </span>
+        <div className="flex items-center gap-4">
+          <span
+            className="hidden sm:block text-xs font-mono tracking-wider"
+            style={{ color: "var(--text-muted)" }}>
+            AI IMPACT BUILDATHON — PS-2
+          </span>
+          <button
+            onClick={toggle}
+            className="p-2 rounded-lg transition-all hover:scale-105"
+            style={{ color: "var(--text-muted)", background: "var(--bg-card)" }}
+            title={
+              theme === "dark" ? "Switch to light mode" : "Switch to dark mode"
+            }>
+            {theme === "dark" ?
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round">
+                <circle cx="12" cy="12" r="5" />
+                <line x1="12" y1="1" x2="12" y2="3" />
+                <line x1="12" y1="21" x2="12" y2="23" />
+                <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+                <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+                <line x1="1" y1="12" x2="3" y2="12" />
+                <line x1="21" y1="12" x2="23" y2="12" />
+                <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+                <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+              </svg>
+            : <svg
+                xmlns="http://www.w3.org/2000/svg"
+                width="16"
+                height="16"
+                viewBox="0 0 24 24"
+                fill="none"
+                stroke="currentColor"
+                strokeWidth="2"
+                strokeLinecap="round"
+                strokeLinejoin="round">
+                <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+              </svg>
+            }
+          </button>
+        </div>
       </header>
 
       {/* Hero */}
       <main className="relative z-10 flex flex-col items-center justify-center px-6 pt-12 pb-8 md:pt-20 md:pb-12 text-center">
         {/* Badge */}
-        <div className="mb-8 inline-flex items-center gap-2 rounded-full border border-blue-500/20 bg-blue-500/[0.08] px-5 py-2 text-xs font-medium text-blue-300 shadow-lg shadow-blue-500/5 backdrop-blur-sm">
+        <div
+          className="mb-8 inline-flex items-center gap-2 rounded-full px-5 py-2 text-xs font-medium shadow-lg backdrop-blur-sm"
+          style={{
+            background: "var(--badge-bg)",
+            borderColor: "var(--badge-border)",
+            border: "1px solid var(--badge-border)",
+            color: "var(--gradient-text-1)",
+          }}>
           <Sparkles size={12} className="animate-pulse" />
           India AI Impact Buildathon 2025
         </div>
@@ -112,7 +197,7 @@ export default function Landing() {
         {/* Animated cycling word */}
         <div className="mb-4 h-16 md:h-[5.5rem] flex items-center justify-center overflow-hidden">
           <span
-            className={`text-5xl md:text-7xl font-extrabold bg-gradient-to-r ${word.gradient} bg-clip-text text-transparent transition-all duration-[400ms] ease-out ${
+            className={`text-5xl md:text-7xl font-extrabold bg-gradient-to-r ${gradient} bg-clip-text text-transparent transition-all duration-[400ms] ease-out ${
               visible ?
                 "opacity-100 translate-y-0 scale-100"
               : "opacity-0 translate-y-3 scale-95"
@@ -121,12 +206,16 @@ export default function Landing() {
           </span>
         </div>
 
-        <h1 className="max-w-3xl text-3xl md:text-5xl font-bold tracking-tight text-white leading-tight">
+        <h1
+          className="max-w-3xl text-3xl md:text-5xl font-bold tracking-tight leading-tight"
+          style={{ color: "var(--text-heading)" }}>
           Scam Intelligence{" "}
           <span className="text-gradient">Command Center</span>
         </h1>
 
-        <p className="mt-6 max-w-2xl text-base md:text-lg text-slate-400 leading-relaxed">
+        <p
+          className="mt-6 max-w-2xl text-base md:text-lg leading-relaxed"
+          style={{ color: "var(--text-tertiary)" }}>
           An agentic honeypot that fools scammers with believable AI
           conversations, extracts critical financial intelligence, and shields
           Indian citizens — all in real-time.
@@ -147,7 +236,12 @@ export default function Landing() {
             href="https://github.com"
             target="_blank"
             rel="noreferrer"
-            className="flex items-center gap-2 rounded-xl border border-slate-700/50 bg-white/[0.03] backdrop-blur-sm px-6 py-3.5 text-sm font-medium text-slate-300 transition-all hover:border-slate-500 hover:text-white hover:bg-white/[0.06]">
+            className="flex items-center gap-2 rounded-xl backdrop-blur-sm px-6 py-3.5 text-sm font-medium transition-all"
+            style={{
+              border: "1px solid var(--border-primary)",
+              background: "var(--bg-card)",
+              color: "var(--text-secondary)",
+            }}>
             <Github size={15} />
             View on GitHub
           </a>
@@ -157,13 +251,17 @@ export default function Landing() {
       {/* Punchline */}
       <section className="relative z-10 py-16 md:py-24 text-center">
         <div className="max-w-3xl mx-auto px-6">
-          <p className="text-2xl md:text-4xl font-bold text-slate-300 leading-snug">
+          <p
+            className="text-2xl md:text-4xl font-bold leading-snug"
+            style={{ color: "var(--text-secondary)" }}>
             Don't just detect scams.
           </p>
           <p className="mt-2 text-3xl md:text-5xl font-extrabold text-gradient leading-snug">
             Outsmart them.
           </p>
-          <div className="mt-8 flex items-center justify-center gap-2 text-sm text-slate-500">
+          <div
+            className="mt-8 flex items-center justify-center gap-2 text-sm"
+            style={{ color: "var(--text-muted)" }}>
             <Fingerprint size={14} className="text-blue-400/60" />
             <span>
               Rule-based authority · optional Gemini LLM · zero false positives
@@ -186,7 +284,9 @@ export default function Landing() {
               <div className="text-3xl md:text-4xl font-extrabold text-gradient">
                 {s.value}
               </div>
-              <div className="mt-1.5 text-xs font-medium text-slate-400">
+              <div
+                className="mt-1.5 text-xs font-medium"
+                style={{ color: "var(--text-tertiary)" }}>
                 {s.label}
               </div>
             </div>
@@ -196,7 +296,9 @@ export default function Landing() {
 
       {/* Features */}
       <section className="relative z-10 px-6 md:px-12 pb-20 max-w-5xl mx-auto">
-        <h2 className="text-center text-sm font-semibold text-slate-400 uppercase tracking-wider mb-8">
+        <h2
+          className="text-center text-sm font-semibold uppercase tracking-wider mb-8"
+          style={{ color: "var(--text-tertiary)" }}>
           How It Works
         </h2>
         <div className="grid sm:grid-cols-2 gap-5">
@@ -212,10 +314,16 @@ export default function Landing() {
                 className={`inline-flex items-center justify-center w-11 h-11 rounded-xl bg-gradient-to-br ${f.color} mb-4 shadow-lg`}>
                 <f.icon size={20} className="text-white" />
               </div>
-              <h3 className="text-base font-semibold text-white mb-2">
+              <h3
+                className="text-base font-semibold mb-2"
+                style={{ color: "var(--text-heading)" }}>
                 {f.title}
               </h3>
-              <p className="text-sm text-slate-400 leading-relaxed">{f.desc}</p>
+              <p
+                className="text-sm leading-relaxed"
+                style={{ color: "var(--text-tertiary)" }}>
+                {f.desc}
+              </p>
             </div>
           ))}
         </div>
@@ -225,12 +333,20 @@ export default function Landing() {
       <section className="relative z-10 px-6 md:px-12 pb-20 max-w-4xl mx-auto">
         <div className="glass rounded-2xl p-8 glow-border text-center">
           <Lock size={24} className="mx-auto text-blue-400 mb-4" />
-          <h3 className="text-lg font-semibold text-white mb-3">
+          <h3
+            className="text-lg font-semibold mb-3"
+            style={{ color: "var(--text-heading)" }}>
             Architecture Invariant
           </h3>
-          <p className="text-sm text-slate-400 max-w-lg mx-auto leading-relaxed">
+          <p
+            className="text-sm max-w-lg mx-auto leading-relaxed"
+            style={{ color: "var(--text-tertiary)" }}>
             The rule-based engine is the{" "}
-            <span className="text-blue-300 font-medium">single authority</span>{" "}
+            <span
+              style={{ color: "var(--gradient-text-1)" }}
+              className="font-medium">
+              single authority
+            </span>{" "}
             for detection and responses. LLM enhances phrasing realism only —
             never overrides detection or generates scam content. MongoDB stores
             session summaries for continuous learning.
@@ -239,10 +355,16 @@ export default function Landing() {
       </section>
 
       {/* Footer */}
-      <footer className="relative z-10 border-t border-slate-800/30 py-6 text-center">
-        <p className="text-xs text-slate-500">
+      <footer
+        className="relative z-10 py-6 text-center"
+        style={{ borderTop: "1px solid var(--border-primary)" }}>
+        <p className="text-xs" style={{ color: "var(--text-muted)" }}>
           &copy; {year}{" "}
-          <span className="text-slate-400 font-medium">200 Hustlers</span>
+          <span
+            className="font-medium"
+            style={{ color: "var(--text-tertiary)" }}>
+            200 Hustlers
+          </span>
           {" — "}TrustHoneypot — Made for AI Impact Buildathon PS-2
         </p>
       </footer>

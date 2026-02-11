@@ -196,11 +196,10 @@ class DatabaseService:
             stats = list(self.db.session_summaries.aggregate(pipeline_stats))
             
             return {
-                "scamTypeDistribution": {r["_id"]: r["count"] for r in type_dist if r["_id"]},
-                "riskLevelDistribution": {r["_id"]: r["count"] for r in risk_dist if r["_id"]},
-                "topTactics": {r["_id"]: r["count"] for r in top_tactics if r["_id"]},
+                "scam_types": type_dist,
+                "risk_distribution": risk_dist,
+                "top_tactics": top_tactics,
                 "stats": stats[0] if stats else {},
-                "note": "We store intelligence summaries, not conversations."
             }
         except Exception as e:
             logger.error(f"Failed to compute patterns: {e}")
@@ -208,11 +207,10 @@ class DatabaseService:
     
     def _empty_patterns(self) -> dict:
         return {
-            "scamTypeDistribution": {},
-            "riskLevelDistribution": {},
-            "topTactics": {},
+            "scam_types": [],
+            "risk_distribution": [],
+            "top_tactics": [],
             "stats": {},
-            "note": "We store intelligence summaries, not conversations."
         }
     
     def get_status(self) -> dict:

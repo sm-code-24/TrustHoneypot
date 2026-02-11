@@ -31,7 +31,8 @@ export async function fetchSessions(limit = 50) {
     headers: headers(),
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+  const data = await res.json();
+  return data.sessions || [];
 }
 
 export async function fetchSessionDetail(sessionId) {
@@ -53,7 +54,8 @@ export async function fetchCallbacks(limit = 50) {
     headers: headers(),
   });
   if (!res.ok) throw new Error(`API error: ${res.status}`);
-  return res.json();
+  const data = await res.json();
+  return data.callbacks || [];
 }
 
 export async function fetchSystemStatus() {

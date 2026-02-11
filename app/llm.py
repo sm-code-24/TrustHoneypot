@@ -16,7 +16,16 @@ import os
 import time
 import asyncio
 import logging
+from pathlib import Path
 from typing import Optional, Tuple
+from dotenv import load_dotenv
+
+# Load .env from repo root (parent of app/) or current dir
+_env_file = Path(__file__).resolve().parent.parent / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
+else:
+    load_dotenv()
 
 logger = logging.getLogger(__name__)
 
@@ -58,7 +67,7 @@ class LLMService:
     
     def __init__(self):
         self.api_key = os.getenv("GEMINI_API_KEY", "")
-        self.timeout_ms = int(os.getenv("LLM_TIMEOUT_MS", "1400"))
+        self.timeout_ms = int(os.getenv("LLM_TIMEOUT_MS", "3000"))
         self.model_name = os.getenv("GEMINI_MODEL", "gemini-3-flash-preview")
         self.enabled = False
         self.client = None
@@ -131,7 +140,7 @@ class LLMService:
     
     async def _generate(self, prompt: str) -> Optional[str]:
         """Call Gemini API asynchronously using google-genai SDK."""
-        loop = asyncio.get_event_loop()
+        loop = asyncio.get_running_loop()
         
         def _sync_generate():
             contents = [
@@ -143,12 +152,26 @@ class LLMService:
             config = types.GenerateContentConfig(
                 system_instruction=SYSTEM_PROMPT,
             )
-            response = self.client.models.generate_content(
-                model=self.model_name,
-                contents=contents,
-                config=config,
-            )
-            return response.text if response else None
+            try:
+                response = self.client.models.generate_content(
+                    model=self.model_name,
+                    contents=contents,
+                    config=config,
+                )
+                if response and hasattr(response, 'text') and response.text:
+                    return response.text
+                # Fallback: try to extract from candidates
+                if response and response.candidates:
+                    for candidate in response.candidates:
+                        if candidate.content and candidate.content.parts:
+                            for part in candidate.content.parts:
+                                if hasattr(part, 'text') and part.text:
+                                    return part.text
+                logger.warning("Gemini returned empty/blocked response")
+                return None
+            except Exception as e:
+                logger.error(f"Gemini generate_content error: {e}")
+                return None
         
         return await loop.run_in_executor(None, _sync_generate)
     

@@ -30,9 +30,15 @@ function StatCard({ icon: Icon, label, value, color = "blue" }) {
       className={`glass rounded-xl p-4 bg-gradient-to-br ${c} border card-hover`}>
       <div className="flex items-center justify-between mb-2">
         <Icon size={16} className="opacity-80" />
-        <span className="text-2xl font-bold text-white">{value}</span>
+        <span
+          className="text-2xl font-bold"
+          style={{ color: "var(--text-heading)" }}>
+          {value}
+        </span>
       </div>
-      <span className="text-xs text-slate-400">{label}</span>
+      <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+        {label}
+      </span>
     </div>
   );
 }
@@ -97,7 +103,9 @@ export default function IntelligenceView() {
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       <div className="flex items-center gap-2">
         <BarChart3 size={18} className="text-blue-400" />
-        <h2 className="text-lg font-semibold text-white">
+        <h2
+          className="text-lg font-semibold"
+          style={{ color: "var(--text-heading)" }}>
           Intelligence Overview
         </h2>
       </div>
@@ -132,7 +140,9 @@ export default function IntelligenceView() {
 
       {/* Intel by type */}
       <div className="glass rounded-xl p-5">
-        <h3 className="text-sm font-semibold text-white mb-4">
+        <h3
+          className="text-sm font-semibold mb-4"
+          style={{ color: "var(--text-heading)" }}>
           Intelligence by Type
         </h3>
         <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
@@ -141,11 +151,21 @@ export default function IntelligenceView() {
             return (
               <div
                 key={key}
-                className="flex items-center gap-3 px-3 py-2.5 rounded-lg bg-slate-800/40 border border-slate-700/30">
+                className="flex items-center gap-3 px-3 py-2.5 rounded-lg border"
+                style={{
+                  background: "var(--bg-tertiary)",
+                  borderColor: "var(--border-primary)",
+                }}>
                 <Icon size={14} className="text-blue-400" />
                 <div>
-                  <div className="text-sm font-medium text-white">{count}</div>
-                  <div className="text-[11px] text-slate-400">
+                  <div
+                    className="text-sm font-medium"
+                    style={{ color: "var(--text-heading)" }}>
+                    {count}
+                  </div>
+                  <div
+                    className="text-[11px]"
+                    style={{ color: "var(--text-tertiary)" }}>
                     {key.replace(/([A-Z])/g, " $1").trim()}
                   </div>
                 </div>
@@ -157,13 +177,24 @@ export default function IntelligenceView() {
 
       {/* Recent sessions table */}
       <div className="glass rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-slate-800/50">
-          <h3 className="text-sm font-semibold text-white">Recent Sessions</h3>
+        <div
+          className="px-5 py-3 border-b"
+          style={{ borderColor: "var(--border-primary)" }}>
+          <h3
+            className="text-sm font-semibold"
+            style={{ color: "var(--text-heading)" }}>
+            Recent Sessions
+          </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-xs text-slate-400 border-b border-slate-800/40">
+              <tr
+                className="text-xs border-b"
+                style={{
+                  color: "var(--text-tertiary)",
+                  borderColor: "var(--border-primary)",
+                }}>
                 <th className="text-left px-5 py-2.5 font-medium">Session</th>
                 <th className="text-left px-5 py-2.5 font-medium">Scam Type</th>
                 <th className="text-center px-5 py-2.5 font-medium">Msgs</th>
@@ -189,14 +220,21 @@ export default function IntelligenceView() {
                 return (
                   <tr
                     key={s.session_id}
-                    className="border-b border-slate-800/30 hover:bg-slate-800/20 transition-colors">
-                    <td className="px-5 py-2.5 font-mono text-xs text-slate-300">
+                    className="border-b transition-colors"
+                    style={{ borderColor: "var(--border-primary)" }}>
+                    <td
+                      className="px-5 py-2.5 font-mono text-xs"
+                      style={{ color: "var(--text-secondary)" }}>
                       {(s.session_id || "").slice(0, 8)}
                     </td>
-                    <td className="px-5 py-2.5 text-xs text-slate-300">
+                    <td
+                      className="px-5 py-2.5 text-xs"
+                      style={{ color: "var(--text-secondary)" }}>
                       {(s.scam_type || "unknown").replace(/_/g, " ")}
                     </td>
-                    <td className="px-5 py-2.5 text-center text-xs text-slate-300">
+                    <td
+                      className="px-5 py-2.5 text-center text-xs"
+                      style={{ color: "var(--text-secondary)" }}>
                       {s.message_count || 0}
                     </td>
                     <td className="px-5 py-2.5 text-center">

@@ -13,7 +13,7 @@ The responses are designed to be believable. No one talks like a robot.
 """
 import random
 from typing import Dict, List, Optional
-from app.detector import detector
+from detector import detector
 
 
 class HoneypotAgent:

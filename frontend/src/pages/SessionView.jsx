@@ -25,7 +25,8 @@ function ModeSlider({ mode, onChange }) {
   return (
     <div className="flex items-center gap-3">
       <span
-        className={`text-xs font-medium transition-colors ${!isLLM ? "text-blue-400" : "text-slate-500"}`}>
+        className={`text-xs font-medium transition-colors ${!isLLM ? "text-blue-400" : ""}`}
+        style={!isLLM ? undefined : { color: "var(--text-muted)" }}>
         Rule-Based
       </span>
       <button
@@ -46,7 +47,8 @@ function ModeSlider({ mode, onChange }) {
         </span>
       </button>
       <span
-        className={`text-xs font-medium transition-colors ${isLLM ? "text-purple-400" : "text-slate-500"}`}>
+        className={`text-xs font-medium transition-colors ${isLLM ? "text-purple-400" : ""}`}
+        style={isLLM ? undefined : { color: "var(--text-muted)" }}>
         LLM-Enhanced
       </span>
     </div>
@@ -89,17 +91,24 @@ function RiskBar({ level, score }) {
   return (
     <div className="space-y-1">
       <div className="flex justify-between text-xs">
-        <span className="text-slate-400">Risk</span>
+        <span style={{ color: "var(--text-tertiary)" }}>Risk</span>
         <span
           className={`font-medium ${
             level === "critical" ? "text-red-400"
             : level === "high" ? "text-orange-400"
-            : "text-slate-300"
-          }`}>
+            : ""
+          }`}
+          style={
+            level !== "critical" && level !== "high" ?
+              { color: "var(--text-secondary)" }
+            : undefined
+          }>
           {(level || "minimal").toUpperCase()}
         </span>
       </div>
-      <div className="h-1.5 rounded-full bg-slate-800 overflow-hidden">
+      <div
+        className="h-1.5 rounded-full overflow-hidden"
+        style={{ background: "var(--bar-track)" }}>
         <div
           className={`h-full rounded-full transition-all duration-500 ${colors[level] || colors.minimal}`}
           style={{ width: `${pct}%` }}
@@ -141,7 +150,7 @@ export default function SessionView() {
       const agentMsg = {
         id: uid(),
         sender: "agent",
-        text: data.agentReply,
+        text: data.reply,
         ts: Date.now(),
         source: data.reply_source || "rule_based",
       };
@@ -180,10 +189,18 @@ export default function SessionView() {
       {/* ── Chat column ── */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Toolbar */}
-        <div className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-6 py-3 border-b border-slate-800/50">
+        <div
+          className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-6 py-3 border-b"
+          style={{ borderColor: "var(--border-primary)" }}>
           <div className="flex items-center gap-3">
-            <h2 className="text-sm font-semibold text-white">Session</h2>
-            <span className="text-[11px] font-mono text-slate-500 hidden sm:block">
+            <h2
+              className="text-sm font-semibold"
+              style={{ color: "var(--text-heading)" }}>
+              Session
+            </h2>
+            <span
+              className="text-[11px] font-mono hidden sm:block"
+              style={{ color: "var(--text-muted)" }}>
               {sessionId.slice(0, 8)}
             </span>
           </div>
@@ -191,13 +208,15 @@ export default function SessionView() {
             <ModeSlider mode={mode} onChange={setMode} />
             <button
               onClick={handleNewSession}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors"
+              className="p-2 rounded-lg transition-colors"
+              style={{ color: "var(--text-tertiary)" }}
               title="New session">
               <RefreshCw size={15} />
             </button>
             <button
               onClick={() => setShowPanel((p) => !p)}
-              className="p-2 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800/60 transition-colors lg:hidden"
+              className="p-2 rounded-lg transition-colors lg:hidden"
+              style={{ color: "var(--text-tertiary)" }}
               title="Toggle analysis">
               <Info size={15} />
             </button>
@@ -211,10 +230,14 @@ export default function SessionView() {
               <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-500/10 to-purple-500/10 flex items-center justify-center border border-slate-800/60 mb-4">
                 <Bot size={28} className="text-blue-400" />
               </div>
-              <h3 className="text-base font-semibold text-white mb-1">
+              <h3
+                className="text-base font-semibold mb-1"
+                style={{ color: "var(--text-heading)" }}>
                 Scam Simulation Ready
               </h3>
-              <p className="text-sm text-slate-400 max-w-sm">
+              <p
+                className="text-sm max-w-sm"
+                style={{ color: "var(--text-tertiary)" }}>
                 Type a scam message to begin. The honeypot agent will respond
                 with realistic human-like replies while extracting intelligence.
               </p>
@@ -233,10 +256,16 @@ export default function SessionView() {
               <div
                 className={`max-w-[75%] rounded-2xl px-4 py-2.5 text-sm leading-relaxed ${
                   m.sender === "scammer" ?
-                    "bg-gradient-to-br from-red-500/15 to-red-600/10 text-red-100 border border-red-500/10"
-                  : m.sender === "agent" ? "glass text-slate-200"
-                  : "bg-amber-500/10 text-amber-300 border border-amber-500/10"
-                }`}>
+                    "bg-gradient-to-br from-red-500/15 to-red-600/10 border border-red-500/10"
+                  : m.sender === "agent" ? "glass"
+                  : "bg-amber-500/10 border border-amber-500/10"
+                }`}
+                style={{
+                  color:
+                    m.sender === "scammer" ? "var(--scammer-text)"
+                    : m.sender === "agent" ? "var(--agent-text)"
+                    : undefined,
+                }}>
                 {m.text}
                 {m.source && (
                   <div className="mt-1.5">
@@ -266,14 +295,20 @@ export default function SessionView() {
         </div>
 
         {/* Input */}
-        <div className="px-4 md:px-6 py-3 border-t border-slate-800/50">
+        <div
+          className="px-4 md:px-6 py-3 border-t"
+          style={{ borderColor: "var(--border-primary)" }}>
           <div className="flex items-center gap-2 glass rounded-xl px-3 py-2">
             <input
               value={input}
               onChange={(e) => setInput(e.target.value)}
               onKeyDown={onKeyDown}
               placeholder="Type a scam message to test..."
-              className="flex-1 bg-transparent text-sm text-slate-200 placeholder-slate-500 outline-none"
+              className="flex-1 bg-transparent text-sm outline-none"
+              style={{
+                color: "var(--text-primary)",
+                "--tw-placeholder-color": "var(--input-placeholder)",
+              }}
               disabled={loading}
             />
             <button
@@ -290,17 +325,23 @@ export default function SessionView() {
       <div
         className={`${
           showPanel ? "block" : "hidden"
-        } lg:block w-full lg:w-80 border-l border-slate-800/50 overflow-y-auto bg-surface-950/50 flex-shrink-0`}>
+        } lg:block w-full lg:w-80 border-l overflow-y-auto flex-shrink-0`}
+        style={{
+          borderColor: "var(--border-primary)",
+          background: "var(--bg-secondary)",
+        }}>
         <div className="px-4 py-4 space-y-4">
           <div className="flex items-center gap-2">
             <Activity size={14} className="text-blue-400" />
-            <h3 className="text-sm font-semibold text-white">
+            <h3
+              className="text-sm font-semibold"
+              style={{ color: "var(--text-heading)" }}>
               Session Analysis
             </h3>
           </div>
 
           {!analysis ?
-            <p className="text-xs text-slate-500">
+            <p className="text-xs" style={{ color: "var(--text-muted)" }}>
               Send a message to see analysis.
             </p>
           : <>
@@ -315,33 +356,41 @@ export default function SessionView() {
               {/* Detection */}
               <div className="glass rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-2">
-                  {analysis.scamDetected ?
+                  {analysis.scam_detected ?
                     <AlertTriangle size={14} className="text-red-400" />
                   : <ShieldCheck size={14} className="text-emerald-400" />}
-                  <span className="text-xs font-medium text-white">
-                    {analysis.scamDetected ? "Scam Detected" : "Monitoring"}
+                  <span
+                    className="text-xs font-medium"
+                    style={{ color: "var(--text-heading)" }}>
+                    {analysis.scam_detected ? "Scam Detected" : "Monitoring"}
                   </span>
                 </div>
                 {analysis.scam_type && analysis.scam_type !== "unknown" && (
-                  <div className="text-xs text-slate-400">
+                  <div
+                    className="text-xs"
+                    style={{ color: "var(--text-tertiary)" }}>
                     Type:{" "}
-                    <span className="text-slate-300">
+                    <span style={{ color: "var(--text-secondary)" }}>
                       {analysis.scam_type.replace(/_/g, " ")}
                     </span>
                   </div>
                 )}
                 {analysis.scam_stage && (
-                  <div className="text-xs text-slate-400">
+                  <div
+                    className="text-xs"
+                    style={{ color: "var(--text-tertiary)" }}>
                     Stage:{" "}
-                    <span className="text-slate-300">
+                    <span style={{ color: "var(--text-secondary)" }}>
                       {analysis.scam_stage}
                     </span>
                   </div>
                 )}
                 {analysis.confidence != null && (
-                  <div className="text-xs text-slate-400">
+                  <div
+                    className="text-xs"
+                    style={{ color: "var(--text-tertiary)" }}>
                     Confidence:{" "}
-                    <span className="text-slate-300">
+                    <span style={{ color: "var(--text-secondary)" }}>
                       {(analysis.confidence * 100).toFixed(0)}%
                     </span>
                   </div>
@@ -351,7 +400,9 @@ export default function SessionView() {
               {/* Intelligence */}
               {analysis.intelligence_counts && (
                 <div className="glass rounded-xl p-3 space-y-2">
-                  <h4 className="text-xs font-medium text-white">
+                  <h4
+                    className="text-xs font-medium"
+                    style={{ color: "var(--text-heading)" }}>
                     Intel Extracted
                   </h4>
                   <div className="grid grid-cols-2 gap-1.5">
@@ -359,8 +410,9 @@ export default function SessionView() {
                       ([k, v]) => (
                         <div
                           key={k}
-                          className="flex justify-between text-xs px-2 py-1 rounded bg-slate-800/40">
-                          <span className="text-slate-400">
+                          className="flex justify-between text-xs px-2 py-1 rounded"
+                          style={{ background: "var(--bg-tertiary)" }}>
+                          <span style={{ color: "var(--text-tertiary)" }}>
                             {k.replace(/([A-Z])/g, " $1").trim()}
                           </span>
                           <span
@@ -375,18 +427,6 @@ export default function SessionView() {
                       ),
                     )}
                   </div>
-                </div>
-              )}
-
-              {/* Notes */}
-              {analysis.agentNotes && (
-                <div className="glass rounded-xl p-3">
-                  <h4 className="text-xs font-medium text-white mb-1">
-                    Agent Notes
-                  </h4>
-                  <p className="text-[11px] text-slate-400 font-mono leading-relaxed break-all">
-                    {analysis.agentNotes}
-                  </p>
                 </div>
               )}
 

@@ -30,7 +30,11 @@ function StatusCard({ icon: Icon, title, connected, detail, color = "blue" }) {
             size={16}
             className={connected ? `text-${color}-400` : "text-slate-500"}
           />
-          <h3 className="text-sm font-semibold text-white">{title}</h3>
+          <h3
+            className="text-sm font-semibold"
+            style={{ color: "var(--text-heading)" }}>
+            {title}
+          </h3>
         </div>
         {connected ?
           <div className="flex items-center gap-1 text-emerald-400">
@@ -84,7 +88,11 @@ export default function SettingsView() {
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       <div className="flex items-center gap-2">
         <Settings size={18} className="text-slate-300" />
-        <h2 className="text-lg font-semibold text-white">System Status</h2>
+        <h2
+          className="text-lg font-semibold"
+          style={{ color: "var(--text-heading)" }}>
+          System Status
+        </h2>
       </div>
 
       {/* Status cards */}
@@ -127,7 +135,9 @@ export default function SettingsView() {
       <div className="glass rounded-xl p-6 glow-border">
         <div className="flex items-center gap-2 mb-4">
           <Lock size={16} className="text-blue-400" />
-          <h3 className="text-sm font-semibold text-white">
+          <h3
+            className="text-sm font-semibold"
+            style={{ color: "var(--text-heading)" }}>
             Architecture Invariants
           </h3>
         </div>
@@ -156,16 +166,24 @@ export default function SettingsView() {
           ].map((item) => (
             <div
               key={item.title}
-              className="flex gap-3 px-4 py-3 rounded-lg bg-slate-800/30 border border-slate-700/20">
+              className="flex gap-3 px-4 py-3 rounded-lg border"
+              style={{
+                background: "var(--bg-tertiary)",
+                borderColor: "var(--border-primary)",
+              }}>
               <item.icon
                 size={16}
                 className="text-blue-400 mt-0.5 flex-shrink-0"
               />
               <div>
-                <div className="text-xs font-medium text-white">
+                <div
+                  className="text-xs font-medium"
+                  style={{ color: "var(--text-heading)" }}>
                   {item.title}
                 </div>
-                <div className="text-[11px] text-slate-400 mt-0.5">
+                <div
+                  className="text-[11px] mt-0.5"
+                  style={{ color: "var(--text-tertiary)" }}>
                   {item.desc}
                 </div>
               </div>

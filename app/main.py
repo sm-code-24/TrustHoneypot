@@ -6,6 +6,17 @@ This is the main entry point for the honeypot system. It receives suspected
 scam messages from the GUVI platform, analyzes them, generates responses,
 extracts intelligence, and reports back when we've gathered enough info.
 """
+import os
+from pathlib import Path
+from dotenv import load_dotenv
+
+# Load .env from repo root (parent of app/) or current dir
+_env_file = Path(__file__).resolve().parent.parent / ".env"
+if _env_file.exists():
+    load_dotenv(_env_file)
+else:
+    load_dotenv()
+
 from fastapi import FastAPI, Depends, HTTPException, Request, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
@@ -13,18 +24,18 @@ from fastapi.responses import JSONResponse
 from typing import Optional
 import logging
 
-from app.models import (
+from models import (
     HoneypotRequest,
     HoneypotResponse
 )
-from app.auth import verify_api_key
-from app.detector import detector
-from app.extractor import extractor
-from app.agent import agent
-from app.memory import memory
-from app.callback import send_final_callback, should_send_callback
-from app.llm import llm_service
-from app.db import db_service
+from auth import verify_api_key
+from detector import detector
+from extractor import extractor
+from agent import agent
+from memory import memory
+from callback import send_final_callback, should_send_callback
+from llm import llm_service
+from db import db_service
 
 # Set up logging so we can see what's happening
 logging.basicConfig(
@@ -276,25 +287,36 @@ async def get_sessions(
 ):
     """Get session summaries (no raw chats). For UI dashboard."""
     summaries = db_service.get_session_summaries(limit=limit)
+    # Normalize DB records (camelCase) to snake_case for frontend
+    normalized = []
+    for s in summaries:
+        normalized.append({
+            "session_id": s.get("sessionId", ""),
+            "scam_type": s.get("scamType", "unknown"),
+            "risk_level": s.get("riskLevel", "minimal"),
+            "confidence": s.get("confidence", 0.0),
+            "message_count": s.get("messageCount", 0),
+            "scam_confirmed": s.get("scamDetected", False),
+            "intelligence_counts": s.get("intelligenceTypes", {}),
+            "callback_sent": s.get("callbackSent", False),
+            "response_mode": s.get("responseMode", "rule_based"),
+            "tactics": s.get("tactics", []),
+        })
     # Also include in-memory sessions not yet in DB
-    in_memory = []
     for sid, session in memory.sessions.items():
         det = detector.get_detection_details(sid)
-        in_memory.append({
-            "sessionId": sid,
-            "scamDetected": session.get("scamConfirmed", False),
-            "messageCount": session.get("messageCount", 0),
-            "callbackSent": session.get("callbackSent", False),
-            "riskLevel": getattr(det, "risk_level", "minimal"),
-            "scamType": getattr(det, "scam_type", "unknown"),
+        normalized.append({
+            "session_id": sid,
+            "scam_confirmed": session.get("scamConfirmed", False),
+            "message_count": session.get("messageCount", 0),
+            "callback_sent": session.get("callbackSent", False),
+            "risk_level": getattr(det, "risk_level", "minimal"),
+            "scam_type": getattr(det, "scam_type", "unknown"),
             "confidence": getattr(det, "confidence", 0.0),
+            "intelligence_counts": {},
             "active": True,
         })
-    return {
-        "sessions": summaries,
-        "activeSessions": in_memory,
-        "note": "We store intelligence summaries, not conversations."
-    }
+    return {"sessions": normalized}
 
 
 @app.get("/sessions/{session_id}")
@@ -331,7 +353,16 @@ async def get_callbacks(
 ):
     """Get callback records for UI."""
     records = db_service.get_callback_records(limit=limit)
-    return {"callbacks": records}
+    # Normalize camelCase -> snake_case for frontend
+    normalized = []
+    for r in records:
+        normalized.append({
+            "session_id": r.get("sessionId", ""),
+            "status": r.get("status", "unknown"),
+            "payload_summary": r.get("payloadSummary", None),
+            "timestamp": r.get("timestamp"),
+        })
+    return {"callbacks": normalized}
 
 
 @app.get("/system/status")

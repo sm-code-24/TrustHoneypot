@@ -58,36 +58,67 @@ export default function CallbacksView() {
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       <div className="flex items-center gap-2">
         <Send size={18} className="text-emerald-400" />
-        <h2 className="text-lg font-semibold text-white">Callback Reports</h2>
+        <h2
+          className="text-lg font-semibold"
+          style={{ color: "var(--text-heading)" }}>
+          Callback Reports
+        </h2>
       </div>
 
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
-        <div className="glass rounded-xl p-4 text-center card-hover border border-slate-800/40">
-          <div className="text-2xl font-bold text-white">
+        <div
+          className="glass rounded-xl p-4 text-center card-hover border"
+          style={{ borderColor: "var(--border-primary)" }}>
+          <div
+            className="text-2xl font-bold"
+            style={{ color: "var(--text-heading)" }}>
             {callbacks.length}
           </div>
-          <div className="text-xs text-slate-400 mt-1">Total</div>
+          <div
+            className="text-xs mt-1"
+            style={{ color: "var(--text-tertiary)" }}>
+            Total
+          </div>
         </div>
         <div className="glass rounded-xl p-4 text-center card-hover border border-emerald-500/10">
           <div className="text-2xl font-bold text-emerald-400">{sent}</div>
-          <div className="text-xs text-slate-400 mt-1">Sent</div>
+          <div
+            className="text-xs mt-1"
+            style={{ color: "var(--text-tertiary)" }}>
+            Sent
+          </div>
         </div>
         <div className="glass rounded-xl p-4 text-center card-hover border border-red-500/10">
           <div className="text-2xl font-bold text-red-400">{failed}</div>
-          <div className="text-xs text-slate-400 mt-1">Failed</div>
+          <div
+            className="text-xs mt-1"
+            style={{ color: "var(--text-tertiary)" }}>
+            Failed
+          </div>
         </div>
       </div>
 
       {/* Callback table */}
       <div className="glass rounded-xl overflow-hidden">
-        <div className="px-5 py-3 border-b border-slate-800/50">
-          <h3 className="text-sm font-semibold text-white">Callback History</h3>
+        <div
+          className="px-5 py-3 border-b"
+          style={{ borderColor: "var(--border-primary)" }}>
+          <h3
+            className="text-sm font-semibold"
+            style={{ color: "var(--text-heading)" }}>
+            Callback History
+          </h3>
         </div>
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="text-xs text-slate-400 border-b border-slate-800/40">
+              <tr
+                className="text-xs border-b"
+                style={{
+                  color: "var(--text-tertiary)",
+                  borderColor: "var(--border-primary)",
+                }}>
                 <th className="text-left px-5 py-2.5 font-medium">Session</th>
                 <th className="text-center px-5 py-2.5 font-medium">Status</th>
                 <th className="text-left px-5 py-2.5 font-medium hidden sm:table-cell">
@@ -101,7 +132,8 @@ export default function CallbacksView() {
                 <tr>
                   <td
                     colSpan={4}
-                    className="px-5 py-8 text-center text-sm text-slate-500">
+                    className="px-5 py-8 text-center text-sm"
+                    style={{ color: "var(--text-muted)" }}>
                     No callbacks sent yet. Engage a scammer to trigger
                     intelligence reporting.
                   </td>
@@ -119,14 +151,19 @@ export default function CallbacksView() {
                 return (
                   <tr
                     key={i}
-                    className="border-b border-slate-800/30 hover:bg-slate-800/20 transition-colors align-top">
-                    <td className="px-5 py-2.5 font-mono text-xs text-slate-300">
+                    className="border-b transition-colors align-top"
+                    style={{ borderColor: "var(--border-primary)" }}>
+                    <td
+                      className="px-5 py-2.5 font-mono text-xs"
+                      style={{ color: "var(--text-secondary)" }}>
                       {(cb.session_id || "").slice(0, 8)}
                     </td>
                     <td className="px-5 py-2.5 text-center">
                       <StatusIcon size={14} className={statusColor} />
                     </td>
-                    <td className="px-5 py-2.5 text-xs text-slate-400 hidden sm:table-cell">
+                    <td
+                      className="px-5 py-2.5 text-xs hidden sm:table-cell"
+                      style={{ color: "var(--text-tertiary)" }}>
                       {cb.timestamp ?
                         new Date(cb.timestamp).toLocaleString()
                       : "—"}

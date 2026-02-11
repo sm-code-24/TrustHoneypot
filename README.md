@@ -26,7 +26,8 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 │                       │                                  │
 │               ┌───────▼───────┐                          │
 │               │ LLM Rephraser │  (optional)              │
-│               │ Gemini Flash  │  timeout → fallback      │
+│               │ Gemini 3 Flash│  timeout → fallback      │
+│               │   Preview     │                          │
 │               └───────────────┘                          │
 │                                                          │
 │               ┌───────────────┐                          │
@@ -53,9 +54,9 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 | **18+ Scam Types**          | Digital arrest, courier, KYC, UPI, lottery, investment, crypto, and more             |
 | **Adaptive Agent**          | 13 response pools (120+ phrases), intelligent rotation to avoid repetition           |
 | **Intelligence Extraction** | UPI IDs, bank accounts, phones, Aadhaar, PAN, emails, phishing links, crypto wallets |
-| **LLM Enhancement**         | Optional Gemini 2.0 Flash rephrasing with 1.4s timeout + auto-fallback               |
+| **LLM Enhancement**         | Optional Gemini 3 Flash Preview rephrasing with 1.4s timeout + auto-fallback         |
 | **Live Callbacks**          | Automatic GUVI platform reporting when sufficient intel gathered                     |
-| **Cyber Dashboard**         | Glassmorphism UI with session chat, analytics, pattern views, and team page          |
+| **Dark / Light Theme**      | Full dark + light theme system with CSS custom properties & glassmorphism            |
 | **Responsive Design**       | Mobile-first with hamburger menu, works on all screen sizes                          |
 
 ---
@@ -82,18 +83,32 @@ cd frontend && npm install && cd ..
 
 ### 2. Environment Variables
 
-```bash
-cp .env.example .env                     # edit with your keys
-cp frontend/.env.example frontend/.env   # edit API URL
+Create a `.env` file in the project root:
+
+```env
+API_KEY=your-api-key-here
+CALLBACK_URL=https://your-guvi-callback-endpoint
+GEMINI_API_KEY=your-google-ai-key       # optional
+GEMINI_MODEL=gemini-3-flash-preview      # optional
+MONGODB_URI=mongodb+srv://...            # optional
+LLM_TIMEOUT_MS=1400                      # optional
 ```
 
-| Variable         | Required | Description                           |
-| ---------------- | -------- | ------------------------------------- |
-| `API_KEY`        | Yes      | API key for auth (`x-api-key` header) |
-| `CALLBACK_URL`   | Yes      | GUVI callback endpoint                |
-| `GOOGLE_API_KEY` | No       | Gemini API key (LLM phrasing)         |
-| `MONGODB_URI`    | No       | MongoDB Atlas connection string       |
-| `LLM_TIMEOUT_MS` | No       | LLM timeout in ms (default: 1400)     |
+Create `frontend/.env`:
+
+```env
+VITE_API_URL=http://localhost:8000
+VITE_API_KEY=your-api-key-here
+```
+
+| Variable         | Required | Description                                  |
+| ---------------- | -------- | -------------------------------------------- |
+| `API_KEY`        | Yes      | API key for auth (`x-api-key` header)        |
+| `CALLBACK_URL`   | Yes      | GUVI callback endpoint                       |
+| `GEMINI_API_KEY` | No       | Google AI API key (LLM phrasing)             |
+| `GEMINI_MODEL`   | No       | Model name (default: gemini-3-flash-preview) |
+| `MONGODB_URI`    | No       | MongoDB Atlas connection string              |
+| `LLM_TIMEOUT_MS` | No       | LLM timeout in ms (default: 1400)            |
 
 ### 3. Run Development
 
@@ -143,17 +158,17 @@ uvicorn app.main:app --host 0.0.0.0 --port 8000
 
 ```json
 {
-  "scamDetected": true,
-  "riskScore": 72,
-  "agentReply": "What? My account? But I used ATM yesterday only!",
-  "agentNotes": "[HIGH] RISK: HIGH (85% confidence) | TYPE: Bank Impersonation | ...",
-  "intelligence": { "upiIds": [], "phoneNumbers": ["9876543210"], ... },
-  "callbackSent": false,
+  "status": "success",
+  "reply": "What? My account? But I used ATM yesterday only!",
   "reply_source": "rule_based",
+  "scam_detected": true,
+  "risk_score": 72,
   "risk_level": "high",
   "confidence": 0.85,
   "scam_type": "bank_impersonation",
-  "scam_stage": "engaged"
+  "scam_stage": "engaged",
+  "intelligence_counts": { "upiIds": 0, "phoneNumbers": 1, "bankAccounts": 0 },
+  "callback_sent": false
 }
 ```
 
@@ -210,9 +225,9 @@ trusthoneypot/
 
 | Layer      | Technology                                       |
 | ---------- | ------------------------------------------------ |
-| Backend    | Python 3.11, FastAPI, Pydantic v2, Uvicorn       |
+| Backend    | Python 3.13, FastAPI, Pydantic v2, Uvicorn       |
 | Frontend   | React 18, Vite 6, Tailwind CSS 3, React Router 6 |
-| LLM        | Google Gemini 2.0 Flash (optional)               |
+| LLM        | Google Gemini 3 Flash Preview (optional)         |
 | Database   | MongoDB Atlas (optional)                         |
 | Icons      | Lucide React                                     |
 | Deployment | Railway (API), Vercel (UI)                       |
