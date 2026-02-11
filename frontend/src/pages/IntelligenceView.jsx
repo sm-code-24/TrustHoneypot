@@ -14,29 +14,35 @@ import {
 } from "lucide-react";
 
 function StatCard({ icon: Icon, label, value, color = "blue" }) {
-  const colors = {
-    blue: "from-blue-500/10 to-blue-600/5 border-blue-500/15 text-blue-400",
-    purple:
-      "from-purple-500/10 to-purple-600/5 border-purple-500/15 text-purple-400",
-    emerald:
-      "from-emerald-500/10 to-emerald-600/5 border-emerald-500/15 text-emerald-400",
-    amber:
-      "from-amber-500/10 to-amber-600/5 border-amber-500/15 text-amber-400",
-    red: "from-red-500/10 to-red-600/5 border-red-500/15 text-red-400",
+  const iconColors = {
+    blue: "text-blue-500",
+    purple: "text-purple-500",
+    emerald: "text-emerald-500",
+    amber: "text-amber-500",
+    red: "text-red-500",
   };
-  const c = colors[color] || colors.blue;
+  const borderColors = {
+    blue: "border-blue-500/20",
+    purple: "border-purple-500/20",
+    emerald: "border-emerald-500/20",
+    amber: "border-amber-500/20",
+    red: "border-red-500/20",
+  };
   return (
     <div
-      className={`glass rounded-xl p-4 bg-gradient-to-br ${c} border card-hover`}>
+      className={`glass rounded-xl p-4 ${borderColors[color] || borderColors.blue} border card-hover`}
+      style={{ background: "var(--bg-card)" }}>
       <div className="flex items-center justify-between mb-2">
-        <Icon size={16} className="opacity-80" />
+        <Icon size={16} className={iconColors[color] || iconColors.blue} />
         <span
           className="text-2xl font-bold"
           style={{ color: "var(--text-heading)" }}>
           {value}
         </span>
       </div>
-      <span className="text-xs" style={{ color: "var(--text-tertiary)" }}>
+      <span
+        className="text-xs font-medium"
+        style={{ color: "var(--text-secondary)" }}>
         {label}
       </span>
     </div>
@@ -210,13 +216,13 @@ export default function IntelligenceView() {
                   s.intelligence_counts || {},
                 ).reduce((a, b) => a + b, 0);
                 const riskColors = {
-                  critical: "text-red-400 bg-red-500/10",
-                  high: "text-orange-400 bg-orange-500/10",
-                  medium: "text-amber-400 bg-amber-500/10",
-                  low: "text-emerald-400 bg-emerald-500/10",
+                  critical: "text-red-500 bg-red-500/10",
+                  high: "text-orange-500 bg-orange-500/10",
+                  medium: "text-amber-500 bg-amber-500/10",
+                  low: "text-emerald-500 bg-emerald-500/10",
                 };
-                const rc =
-                  riskColors[s.risk_level] || "text-slate-400 bg-slate-800/40";
+                const rc = riskColors[s.risk_level] || "bg-slate-500/10";
+                const rcText = riskColors[s.risk_level] ? "" : "";
                 return (
                   <tr
                     key={s.session_id}
@@ -239,11 +245,16 @@ export default function IntelligenceView() {
                     </td>
                     <td className="px-5 py-2.5 text-center">
                       <span
-                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${rc}`}>
+                        className={`inline-block px-2 py-0.5 rounded text-[10px] font-medium ${rc}`}
+                        style={
+                          !riskColors[s.risk_level] ?
+                            { color: "var(--text-tertiary)" }
+                          : undefined
+                        }>
                         {(s.risk_level || "–").toUpperCase()}
                       </span>
                     </td>
-                    <td className="px-5 py-2.5 text-center text-xs text-blue-400 font-medium hidden sm:table-cell">
+                    <td className="px-5 py-2.5 text-center text-xs text-blue-500 font-medium hidden sm:table-cell">
                       {intelCount}
                     </td>
                   </tr>
@@ -253,7 +264,8 @@ export default function IntelligenceView() {
                 <tr>
                   <td
                     colSpan={5}
-                    className="px-5 py-8 text-center text-sm text-slate-500">
+                    className="px-5 py-8 text-center text-sm"
+                    style={{ color: "var(--text-muted)" }}>
                     No sessions recorded yet. Start a session from the Session
                     tab.
                   </td>

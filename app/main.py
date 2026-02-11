@@ -564,11 +564,19 @@ async def get_callbacks(
     # Normalize camelCase -> snake_case for frontend
     normalized = []
     for r in records:
+        # Convert timestamp to ISO format string with timezone
+        ts = r.get("timestamp")
+        if ts:
+            if hasattr(ts, 'isoformat'):
+                ts = ts.isoformat()
+            # Ensure it ends with Z for UTC
+            if isinstance(ts, str) and not ts.endswith('Z') and '+' not in ts:
+                ts = ts + 'Z'
         normalized.append({
             "session_id": r.get("sessionId", ""),
             "status": r.get("status", "unknown"),
             "payload_summary": r.get("payloadSummary", None),
-            "timestamp": r.get("timestamp"),
+            "timestamp": ts,
         })
     return {"callbacks": normalized}
 

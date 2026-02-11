@@ -12,19 +12,25 @@ import {
 
 function JsonPreview({ data }) {
   const [open, setOpen] = useState(false);
-  if (!data) return <span className="text-slate-500">—</span>;
+  if (!data) return <span style={{ color: "var(--text-muted)" }}>—</span>;
   return (
     <div>
       <button
         onClick={() => setOpen((o) => !o)}
-        className="flex items-center gap-1 text-[11px] text-blue-400 hover:text-blue-300 transition-colors">
+        className="flex items-center gap-1 text-[11px] text-blue-500 hover:text-blue-600 transition-colors">
         {open ?
           <ChevronUp size={12} />
         : <ChevronDown size={12} />}
         {open ? "Hide" : "View"} payload
       </button>
       {open && (
-        <pre className="mt-2 text-[10px] font-mono text-slate-400 bg-slate-800/60 rounded-lg p-3 overflow-x-auto max-h-40 whitespace-pre-wrap leading-relaxed border border-slate-700/30">
+        <pre
+          className="mt-2 text-[10px] font-mono rounded-lg p-3 overflow-x-auto max-h-40 whitespace-pre-wrap leading-relaxed border"
+          style={{
+            color: "var(--text-secondary)",
+            background: "var(--bg-tertiary)",
+            borderColor: "var(--border-primary)",
+          }}>
           {JSON.stringify(data, null, 2)}
         </pre>
       )}
@@ -145,9 +151,9 @@ export default function CallbacksView() {
                   : cb.status === "failed" ? XCircle
                   : Clock;
                 const statusColor =
-                  cb.status === "sent" ? "text-emerald-400"
-                  : cb.status === "failed" ? "text-red-400"
-                  : "text-slate-400";
+                  cb.status === "sent" ? "text-emerald-500"
+                  : cb.status === "failed" ? "text-red-500"
+                  : "";
                 return (
                   <tr
                     key={i}
@@ -159,13 +165,25 @@ export default function CallbacksView() {
                       {(cb.session_id || "").slice(0, 8)}
                     </td>
                     <td className="px-5 py-2.5 text-center">
-                      <StatusIcon size={14} className={statusColor} />
+                      <StatusIcon
+                        size={14}
+                        className={statusColor}
+                        style={
+                          !statusColor ?
+                            { color: "var(--text-muted)" }
+                          : undefined
+                        }
+                      />
                     </td>
                     <td
                       className="px-5 py-2.5 text-xs hidden sm:table-cell"
                       style={{ color: "var(--text-tertiary)" }}>
                       {cb.timestamp ?
-                        new Date(cb.timestamp).toLocaleString()
+                        new Date(cb.timestamp).toLocaleString("en-IN", {
+                          timeZone: "Asia/Kolkata",
+                          dateStyle: "medium",
+                          timeStyle: "short",
+                        })
                       : "—"}
                     </td>
                     <td className="px-5 py-2.5">

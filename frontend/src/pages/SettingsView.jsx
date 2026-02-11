@@ -14,21 +14,28 @@ import {
 } from "lucide-react";
 
 function StatusCard({ icon: Icon, title, connected, detail, color = "blue" }) {
-  const borderColor =
-    connected ?
-      `border-${
-        color === "emerald" ? "emerald"
-        : color === "purple" ? "purple"
-        : "blue"
-      }-500/15`
-    : "border-slate-700/40";
+  const iconColors = {
+    blue: "text-blue-500",
+    purple: "text-purple-500",
+    emerald: "text-emerald-500",
+  };
+  const borderColors = {
+    blue: "border-blue-500/15",
+    purple: "border-purple-500/15",
+    emerald: "border-emerald-500/15",
+  };
+  const borderColor = connected ? borderColors[color] || borderColors.blue : "";
+  const iconColor = connected ? iconColors[color] || iconColors.blue : "";
   return (
-    <div className={`glass rounded-xl p-5 border ${borderColor} card-hover`}>
+    <div
+      className={`glass rounded-xl p-5 border ${borderColor} card-hover`}
+      style={!connected ? { borderColor: "var(--border-primary)" } : undefined}>
       <div className="flex items-center justify-between mb-3">
         <div className="flex items-center gap-2">
           <Icon
             size={16}
-            className={connected ? `text-${color}-400` : "text-slate-500"}
+            className={iconColor}
+            style={!connected ? { color: "var(--text-muted)" } : undefined}
           />
           <h3
             className="text-sm font-semibold"
@@ -37,22 +44,30 @@ function StatusCard({ icon: Icon, title, connected, detail, color = "blue" }) {
           </h3>
         </div>
         {connected ?
-          <div className="flex items-center gap-1 text-emerald-400">
+          <div className="flex items-center gap-1 text-emerald-500">
             <CheckCircle size={14} />
             <span className="text-[11px] font-medium">Connected</span>
           </div>
-        : <div className="flex items-center gap-1 text-slate-500">
+        : <div
+            className="flex items-center gap-1"
+            style={{ color: "var(--text-muted)" }}>
             <XCircle size={14} />
             <span className="text-[11px] font-medium">Unavailable</span>
           </div>
         }
       </div>
       {detail && (
-        <div className="text-xs text-slate-400 space-y-1">
+        <div
+          className="text-xs space-y-1"
+          style={{ color: "var(--text-tertiary)" }}>
           {Object.entries(detail).map(([k, v]) => (
             <div key={k} className="flex justify-between">
               <span>{k}</span>
-              <span className="text-slate-300 font-mono">{String(v)}</span>
+              <span
+                className="font-mono"
+                style={{ color: "var(--text-secondary)" }}>
+                {String(v)}
+              </span>
             </div>
           ))}
         </div>
@@ -87,7 +102,7 @@ export default function SettingsView() {
   return (
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       <div className="flex items-center gap-2">
-        <Settings size={18} className="text-slate-300" />
+        <Settings size={18} style={{ color: "var(--text-secondary)" }} />
         <h2
           className="text-lg font-semibold"
           style={{ color: "var(--text-heading)" }}>

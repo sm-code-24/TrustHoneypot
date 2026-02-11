@@ -134,7 +134,8 @@ export default function Dashboard() {
         <div className="absolute top-3 right-3">
           <button
             onClick={() => setSidebarOpen(false)}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-white hover:bg-slate-800">
+            className="p-1.5 rounded-lg transition-colors"
+            style={{ color: "var(--text-tertiary)" }}>
             <X size={18} />
           </button>
         </div>

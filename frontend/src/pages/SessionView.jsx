@@ -28,33 +28,36 @@ const uid = () =>
 function ModeSlider({ mode, onChange }) {
   const isLLM = mode === "llm";
   return (
-    <div className="flex items-center gap-3">
+    <div className="flex items-center gap-2 sm:gap-3">
       <span
-        className={`text-xs font-medium transition-colors ${!isLLM ? "text-blue-400" : ""}`}
+        className={`text-xs font-medium transition-colors hidden sm:inline ${!isLLM ? "text-blue-400" : ""}`}
         style={!isLLM ? undefined : { color: "var(--text-muted)" }}>
-        Rule-Based
+        Rule
       </span>
       <button
         onClick={() => onChange(isLLM ? "rule_based" : "llm")}
-        className={`relative w-14 h-7 rounded-full transition-all duration-300 focus:outline-none ${
+        className={`relative w-12 sm:w-14 h-6 sm:h-7 rounded-full transition-all duration-300 focus:outline-none ${
           isLLM ?
             "bg-gradient-to-r from-purple-600 to-pink-500 shadow-lg shadow-purple-500/20"
           : "bg-gradient-to-r from-blue-600 to-cyan-500 shadow-lg shadow-blue-500/20"
         }`}
         title={isLLM ? "Switch to Rule-Based" : "Switch to LLM-Enhanced"}>
         <span
-          className={`absolute top-0.5 w-6 h-6 rounded-full bg-white shadow-md flex items-center justify-center mode-slider ${
-            isLLM ? "left-[30px]" : "left-0.5"
+          className={`absolute top-0.5 w-5 sm:w-6 h-5 sm:h-6 rounded-full bg-white shadow-md flex items-center justify-center mode-slider ${
+            isLLM ? "left-[26px] sm:left-[30px]" : "left-0.5"
           }`}>
           {isLLM ?
-            <Sparkles size={12} className="text-purple-600" />
-          : <Cpu size={12} className="text-blue-600" />}
+            <Sparkles size={10} className="text-purple-600 sm:hidden" />
+          : <Cpu size={10} className="text-blue-600 sm:hidden" />}
+          {isLLM ?
+            <Sparkles size={12} className="text-purple-600 hidden sm:block" />
+          : <Cpu size={12} className="text-blue-600 hidden sm:block" />}
         </span>
       </button>
       <span
-        className={`text-xs font-medium transition-colors ${isLLM ? "text-purple-400" : ""}`}
+        className={`text-xs font-medium transition-colors hidden sm:inline ${isLLM ? "text-purple-400" : ""}`}
         style={isLLM ? undefined : { color: "var(--text-muted)" }}>
-        LLM-Enhanced
+        LLM
       </span>
     </div>
   );
@@ -223,23 +226,24 @@ function ScenarioSelector({ scenarios, onSelect, loading, disabled }) {
       <button
         onClick={() => !disabled && setOpen((o) => !o)}
         disabled={disabled || loading}
-        className="flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all bg-gradient-to-r from-emerald-600/80 to-teal-600/80 text-white hover:shadow-lg hover:shadow-emerald-500/20 disabled:opacity-40"
+        className="flex items-center gap-1.5 sm:gap-2 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all bg-gradient-to-r from-emerald-600/80 to-teal-600/80 text-white hover:shadow-lg hover:shadow-emerald-500/20 disabled:opacity-40"
         title="Run auto-simulation with a demo scenario">
         {loading ?
-          <Loader2 size={13} className="animate-spin" />
-        : <Play size={13} />}
-        Simulate
+          <Loader2 size={12} className="animate-spin" />
+        : <Play size={12} />}
+        <span className="hidden xs:inline">Simulate</span>
+        <span className="xs:hidden">Sim</span>
       </button>
 
       {open && (
         <div
-          className="absolute right-0 top-full mt-1 w-72 rounded-xl border shadow-xl z-50 overflow-hidden"
+          className="fixed sm:absolute inset-x-4 sm:inset-x-auto sm:left-auto sm:right-0 top-auto sm:top-full mt-1 sm:w-72 max-h-[70vh] rounded-xl border shadow-xl z-50 overflow-hidden flex flex-col"
           style={{
             background: "var(--bg-primary)",
             borderColor: "var(--border-primary)",
           }}>
           <div
-            className="px-3 py-2 border-b"
+            className="px-3 py-2 border-b flex-shrink-0"
             style={{ borderColor: "var(--border-primary)" }}>
             <span
               className="text-xs font-semibold"
@@ -247,48 +251,50 @@ function ScenarioSelector({ scenarios, onSelect, loading, disabled }) {
               Demo Scenarios
             </span>
           </div>
-          {scenarios.map((s) => (
-            <button
-              key={s.id}
-              onClick={() => {
-                setOpen(false);
-                onSelect(s.id);
-              }}
-              className="w-full text-left px-3 py-2.5 hover:bg-blue-500/5 transition-colors border-b last:border-0"
-              style={{ borderColor: "var(--border-primary)" }}>
-              <div className="flex items-center justify-between">
-                <span
-                  className="text-xs font-medium"
-                  style={{ color: "var(--text-heading)" }}>
-                  {s.name}
-                </span>
-                <span
-                  className={`text-[10px] ${diffColors[s.difficulty] || ""}`}>
-                  {s.difficulty}
-                </span>
-              </div>
-              <p
-                className="text-[10px] mt-0.5 line-clamp-2"
-                style={{ color: "var(--text-muted)" }}>
-                {s.description}
-              </p>
-              <div className="flex items-center gap-2 mt-1">
-                <span
-                  className="text-[9px] px-1.5 py-0.5 rounded-full border"
-                  style={{
-                    color: "var(--text-tertiary)",
-                    borderColor: "var(--border-primary)",
-                  }}>
-                  {s.language === "hi" ? "Hindi" : "English"}
-                </span>
-                <span
-                  className="text-[9px]"
-                  style={{ color: "var(--text-tertiary)" }}>
-                  {s.message_count} messages
-                </span>
-              </div>
-            </button>
-          ))}
+          <div className="overflow-y-auto flex-1">
+            {scenarios.map((s) => (
+              <button
+                key={s.id}
+                onClick={() => {
+                  setOpen(false);
+                  onSelect(s.id);
+                }}
+                className="w-full text-left px-3 py-2.5 hover:bg-blue-500/5 transition-colors border-b last:border-0"
+                style={{ borderColor: "var(--border-primary)" }}>
+                <div className="flex items-center justify-between">
+                  <span
+                    className="text-xs font-medium"
+                    style={{ color: "var(--text-heading)" }}>
+                    {s.name}
+                  </span>
+                  <span
+                    className={`text-[10px] ${diffColors[s.difficulty] || ""}`}>
+                    {s.difficulty}
+                  </span>
+                </div>
+                <p
+                  className="text-[10px] mt-0.5 line-clamp-2"
+                  style={{ color: "var(--text-muted)" }}>
+                  {s.description}
+                </p>
+                <div className="flex items-center gap-2 mt-1">
+                  <span
+                    className="text-[9px] px-1.5 py-0.5 rounded-full border"
+                    style={{
+                      color: "var(--text-tertiary)",
+                      borderColor: "var(--border-primary)",
+                    }}>
+                    {s.language === "hi" ? "Hindi" : "English"}
+                  </span>
+                  <span
+                    className="text-[9px]"
+                    style={{ color: "var(--text-tertiary)" }}>
+                    {s.message_count} messages
+                  </span>
+                </div>
+              </button>
+            ))}
+          </div>
         </div>
       )}
     </div>
@@ -480,21 +486,21 @@ export default function SessionView() {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Toolbar */}
         <div
-          className="flex flex-wrap items-center justify-between gap-3 px-4 md:px-6 py-3 border-b"
+          className="flex flex-wrap items-center justify-between gap-2 sm:gap-3 px-3 sm:px-4 md:px-6 py-2 sm:py-3 border-b"
           style={{ borderColor: "var(--border-primary)" }}>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <h2
-              className="text-sm font-semibold"
+              className="text-xs sm:text-sm font-semibold"
               style={{ color: "var(--text-heading)" }}>
               Session
             </h2>
             <span
-              className="text-[11px] font-mono hidden sm:block"
+              className="text-[10px] sm:text-[11px] font-mono hidden sm:block"
               style={{ color: "var(--text-muted)" }}>
               {sessionId.slice(0, 8)}
             </span>
           </div>
-          <div className="flex items-center gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <ModeSlider mode={mode} onChange={setMode} />
             <ScenarioSelector
               scenarios={scenarios}
@@ -583,7 +589,7 @@ export default function SessionView() {
               <div className="w-7 h-7 rounded-full bg-blue-500/10 flex items-center justify-center border border-blue-500/20">
                 <Loader2 size={14} className="animate-spin" />
               </div>
-              <span className="text-xs text-slate-400">
+              <span className="text-xs" style={{ color: "var(--text-muted)" }}>
                 {simulating ? "Simulation running..." : "Agent is analyzing..."}
               </span>
             </div>
@@ -623,10 +629,19 @@ export default function SessionView() {
       </div>
 
       {/* ── Analysis panel ── */}
+      {/* Mobile overlay backdrop */}
+      {showPanel && (
+        <div
+          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
+          onClick={() => setShowPanel(false)}
+        />
+      )}
       <div
         className={`${
-          showPanel ? "block" : "hidden"
-        } lg:block w-full lg:w-80 border-l overflow-y-auto flex-shrink-0`}
+          showPanel ?
+            "fixed inset-y-0 right-0 z-50 w-80 max-w-[85vw]"
+          : "hidden"
+        } lg:relative lg:block lg:w-80 border-l overflow-y-auto flex-shrink-0`}
         style={{
           borderColor: "var(--border-primary)",
           background: "var(--bg-secondary)",
