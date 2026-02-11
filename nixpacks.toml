@@ -2,11 +2,5 @@
 # Force Python provider — frontend is deployed separately on Vercel.
 providers = ["python"]
 
-[phases.setup]
-nixPkgs = ["python311"]
-
-[phases.install]
-cmds = ["pip install -r requirements.txt"]
-
 [start]
 cmd = "uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000} --app-dir app"
