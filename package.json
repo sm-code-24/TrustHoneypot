@@ -1,0 +1,22 @@
+{
+  "name": "trusthoneypot",
+  "version": "2.0.0",
+  "private": true,
+  "description": "TrustHoneypot — Agentic Scam Intelligence Platform (India AI Impact Buildathon PS-2)",
+  "scripts": {
+    "dev:backend": "uvicorn app.main:app --reload --host 0.0.0.0 --port 8000",
+    "dev:frontend": "cd frontend && npm run dev",
+    "dev": "start /b uvicorn app.main:app --reload --host 0.0.0.0 --port 8000 && cd frontend && npm run dev",
+    "build": "cd frontend && npm run build",
+    "start": "uvicorn app.main:app --host 0.0.0.0 --port 8000"
+  },
+  "keywords": [
+    "honeypot",
+    "scam-detection",
+    "fastapi",
+    "react",
+    "ai-buildathon"
+  ],
+  "author": "200 Hustlers",
+  "license": "MIT"
+}
