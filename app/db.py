@@ -32,20 +32,21 @@ class DatabaseService:
         self._connect()
     
     def _connect(self):
+        logger.info(f"🗄️ DB INIT: pymongo={PYMONGO_AVAILABLE}, uri_set={bool(self.mongo_uri)}, uri_len={len(self.mongo_uri)}, db={self.db_name}")
         if not PYMONGO_AVAILABLE:
-            logger.info("DB service disabled: pymongo not installed")
+            logger.warning("🗄️ DB service DISABLED: pymongo not installed. Install with: pip install pymongo")
             return
         if not self.mongo_uri:
-            logger.info("DB service disabled: MONGODB_URI not set")
+            logger.warning("🗄️ DB service DISABLED: MONGODB_URI not set in environment variables")
             return
         try:
             self.client = MongoClient(self.mongo_uri, serverSelectionTimeoutMS=3000)
             self.client.admin.command("ping")
             self.db = self.client[self.db_name]
             self.enabled = True
-            logger.info(f"MongoDB connected: {self.db_name}")
+            logger.info(f"🗄️ DB CONNECTED: {self.db_name} — ready to store sessions & callbacks")
         except Exception as e:
-            logger.error(f"MongoDB connection failed: {e}")
+            logger.error(f"🗄️ DB CONNECTION FAILED: {e}", exc_info=True)
             self.enabled = False
     
     # ── Session Summaries ──────────────────────────────────────────────
@@ -65,6 +66,7 @@ class DatabaseService:
     ):
         """Persist a session summary (no raw messages)."""
         if not self.enabled:
+            logger.warning(f"DB not enabled: callback record for session {session_id} not saved.")
             return
         try:
             doc = {
@@ -125,7 +127,9 @@ class DatabaseService:
         payload_summary: dict,
     ):
         """Save callback record (summary only, no raw intel)."""
+        logger.info(f"🗄️ SAVE CALLBACK RECORD: session={session_id[:8]}, status={status}, enabled={self.enabled}")
         if not self.enabled:
+            logger.warning(f"🗄️ DB NOT ENABLED: callback record for session {session_id[:8]} NOT saved to DB")
             return
         try:
             doc = {

@@ -128,7 +128,7 @@ export default function SettingsView() {
           connected={llm.available}
           color="purple"
           detail={{
-            Model: llm.model || "gemini-2.0-flash",
+            Model: llm.model || "llama-3.3-70b-versatile",
             Timeout: `${llm.timeout_ms || 1400}ms`,
             Mode: llm.available ? "Active" : "Fallback to rule-based",
           }}
@@ -166,7 +166,7 @@ export default function SettingsView() {
             {
               icon: Brain,
               title: "LLM Enhancement Only",
-              desc: "Gemini rephrases agent replies for realism. Timeouts auto-fallback to rule-based.",
+              desc: "Groq LLM rephrases agent replies for realism. Timeouts auto-fallback to rule-based.",
             },
             {
               icon: Database,

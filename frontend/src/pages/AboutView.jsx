@@ -51,7 +51,7 @@ const SOLUTION_HIGHLIGHTS = [
   {
     icon: Brain,
     title: "Agentic AI Engagement",
-    desc: "An adaptive bilingual (English + Hindi) agent that role-plays as a convincing victim, using 260+ category-specific response templates with Gemini 2.5 Flash-Lite LLM rephrasing and circuit breaker for production reliability.",
+    desc: "An adaptive bilingual (English + Hindi) agent that role-plays as a convincing victim, using 260+ category-specific response templates with Llama 3.3 70B LLM rephrasing via Groq and circuit breaker for production reliability.",
     color: "from-purple-500 to-pink-400",
   },
   {

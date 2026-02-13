@@ -85,7 +85,8 @@ def send_final_callback(
             "agentNotes": agent_notes
         }
         
-        logger.info(f"Sending callback for session {session_id} to {CALLBACK_URL}")
+        logger.info(f"🚀 SENDING CALLBACK for session {session_id} to {CALLBACK_URL}")
+        logger.info(f"🚀 CALLBACK PAYLOAD: {json.dumps(payload, ensure_ascii=False)[:800]}")
         
         response = requests.post(
             CALLBACK_URL,
@@ -129,15 +130,28 @@ def should_send_callback(scam_detected: bool, total_messages: int, intelligence:
     
     This is the FINAL step of the conversation lifecycle.
     """
-    has_intel = any([
-        len(intelligence.get("bankAccounts", [])) > 0,
-        len(intelligence.get("upiIds", [])) > 0,
-        len(intelligence.get("phishingLinks", [])) > 0,
-        len(intelligence.get("phoneNumbers", [])) > 0,
-    ])
+    bank_ct = len(intelligence.get("bankAccounts", []))
+    upi_ct = len(intelligence.get("upiIds", []))
+    link_ct = len(intelligence.get("phishingLinks", []))
+    phone_ct = len(intelligence.get("phoneNumbers", []))
+    has_intel = any([bank_ct > 0, upi_ct > 0, link_ct > 0, phone_ct > 0])
     
-    # All three conditions must be met:
-    # 1. Scam confirmed
-    # 2. Sufficient engagement (3+ messages shows real interaction)
-    # 3. Intel extracted (we have actionable data)
-    return scam_detected and total_messages >= 3 and has_intel
+    eligible = scam_detected and total_messages >= 3 and has_intel
+    
+    # Always log eligibility for debugging deployed issues
+    logger.info(
+        f"📋 CALLBACK ELIGIBILITY: eligible={eligible} | "
+        f"scam_detected={scam_detected}, total_messages={total_messages}(need>=3), "
+        f"has_intel={has_intel} [bank={bank_ct}, upi={upi_ct}, links={link_ct}, phone={phone_ct}]"
+    )
+    if not eligible:
+        reasons = []
+        if not scam_detected:
+            reasons.append("scam NOT confirmed")
+        if total_messages < 3:
+            reasons.append(f"only {total_messages} messages (need 3+)")
+        if not has_intel:
+            reasons.append("NO intel extracted (need bankAccounts/upiIds/phishingLinks/phoneNumbers)")
+        logger.warning(f"⚠️ CALLBACK NOT ELIGIBLE: {', '.join(reasons)}")
+    
+    return eligible

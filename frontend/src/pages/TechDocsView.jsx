@@ -42,8 +42,8 @@ const TECH_STACK = [
     color: "from-purple-500 to-pink-400",
     items: [
       {
-        name: "Google Gemini 2.5 Flash-Lite",
-        desc: "Fastest Gemini model for bilingual (EN/HI) reply rephrasing with generous free-tier limits",
+        name: "Groq Llama 3.3 70B Versatile",
+        desc: "Ultra-fast inference for bilingual (EN/HI) reply rephrasing with 14,400 free requests/day",
       },
       {
         name: "httpx AsyncClient",
@@ -222,9 +222,9 @@ export default function TechDocsView() {
             Incoming scammer message → 5-layer detection engine classifies
             threat level & scam category → Intelligence extractor parses
             financial data (UPI, bank, Aadhaar, etc.) → AI agent generates
-            contextual response using rule-based templates + optional Gemini LLM
-            rephrasing → Session summary and extracted intelligence persisted to
-            MongoDB for threat pattern learning.
+            contextual response using rule-based templates + Groq LLM rephrasing
+            → Session summary and extracted intelligence persisted to MongoDB
+            for threat pattern learning.
           </p>
         </div>
       </section>
@@ -246,8 +246,8 @@ export default function TechDocsView() {
             style={{ color: "var(--gradient-text-1)" }}>
             single authority
           </span>{" "}
-          for all detection and response decisions. The Gemini LLM is an
-          optional enhancement that only rephrases responses for realism — it{" "}
+          for all detection and response decisions. The Groq LLM is an optional
+          enhancement that only rephrases responses for realism — it{" "}
           <span className="text-red-400 font-medium">never</span> overrides
           detection, generates scam content, or makes classification decisions.
           This ensures deterministic, auditable behavior at all times.

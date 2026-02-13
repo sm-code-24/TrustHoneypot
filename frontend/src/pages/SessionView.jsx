@@ -383,6 +383,24 @@ export default function SessionView() {
       const history = messages.map((m) => ({ sender: m.sender, text: m.text }));
       const data = await sendMessage(sessionId, text, history, mode);
 
+      // If LLM was selected but the backend fell back, show a warning
+      if (mode === "llm" && data.reply_source === "rule_based_fallback") {
+        setMessages((prev) => [
+          ...prev,
+          {
+            id: uid(),
+            sender: "system",
+            text: "LLM unavailable or failed. Fallback to rule-based reply.",
+            ts: Date.now(),
+          },
+        ]);
+        // Also log to console for debugging
+        // eslint-disable-next-line no-console
+        console.warn(
+          "[LLM] Fallback to rule-based: LLM unavailable or failed.",
+        );
+      }
+
       const agentMsg = {
         id: uid(),
         sender: "agent",
@@ -402,6 +420,8 @@ export default function SessionView() {
           ts: Date.now(),
         },
       ]);
+      // eslint-disable-next-line no-console
+      console.error("[LLM] API error:", err);
     } finally {
       setLoading(false);
     }

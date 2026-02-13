@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { useNavigate } from "react-router-dom";
+import { useNavigate, Link } from "react-router-dom";
 import {
   Shield,
   Brain,
@@ -46,7 +46,7 @@ const FEATURES = [
   {
     icon: Brain,
     title: "Adaptive AI Agent",
-    desc: "Rule-based core with optional Gemini LLM rephrasing — keeps scammers engaged while extracting intel.",
+    desc: "Rule-based core with Groq-powered LLM rephrasing — keeps scammers engaged while extracting intel.",
     color: "from-purple-500 to-pink-400",
   },
   {
@@ -270,9 +270,7 @@ export default function Landing() {
             className="mt-8 flex items-center justify-center gap-2 text-sm"
             style={{ color: "var(--text-muted)" }}>
             <Fingerprint size={14} className="text-blue-400/60" />
-            <span>
-              Rule-based authority · optional Gemini LLM · zero false positives
-            </span>
+            <span>Rule-based authority · Groq LLM · zero false positives</span>
           </div>
         </div>
       </section>
@@ -367,11 +365,12 @@ export default function Landing() {
         style={{ borderTop: "1px solid var(--border-primary)" }}>
         <p className="text-xs" style={{ color: "var(--text-muted)" }}>
           &copy; {year}{" "}
-          <span
-            className="font-medium"
+          <Link
+            to="/about"
+            className="font-medium hover:underline"
             style={{ color: "var(--text-tertiary)" }}>
             200 Hustlers
-          </span>
+          </Link>
           {" — "}TrustHoneypot — Made for AI Impact Buildathon PS-2
         </p>
       </footer>

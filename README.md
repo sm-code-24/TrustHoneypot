@@ -30,9 +30,9 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 │  └──────────┘  └──────┬───┘  └───────────┘  └────────┘ │
 │                       │                                  │
 │               ┌───────▼───────┐                          │
-│               │ LLM Rephraser │  (optional)              │
-│               │ Gemini 2.5    │  circuit breaker +       │
-│               │  Flash-Lite   │  auto-fallback           │
+│               │ LLM Rephraser │                           │
+│               │  Groq Llama   │  circuit breaker +       │
+│               │  3.3 70B      │  auto-fallback           │
 │               └───────────────┘                          │
 │                                                          │
 │               ┌───────────────┐                          │
@@ -53,19 +53,19 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 
 ## Key Features
 
-| Feature                     | Description                                                                          |
-| --------------------------- | ------------------------------------------------------------------------------------ |
-| **5-Layer Detection**       | Keyword → Pattern → India-specific → Behavioral → Confidence scoring                 |
-| **18+ Scam Types**          | Digital arrest, courier, KYC, UPI, lottery, investment, crypto, and more             |
-| **Bilingual (EN + HI)**     | Full Hindi/Hinglish support — detection, agent responses, and LLM rephrasing         |
-| **Adaptive Agent**          | 15+ response pools × 2 languages (260+ phrases), context-aware rotation              |
-| **Intelligence Extraction** | UPI IDs, bank accounts, phones, Aadhaar, PAN, emails, phishing links, crypto wallets |
-| **LLM Enhancement**         | Gemini 2.5 Flash-Lite via REST API with circuit breaker + auto-fallback              |
-| **10 Simulation Scenarios** | Bank, UPI, lottery, KYC, digital arrest, courier, investment, job, utility scams     |
-| **Live Callbacks**          | Automatic GUVI platform reporting when sufficient intel gathered                     |
-| **Dark / Light Theme**      | Full dark + light theme system with CSS custom properties & glassmorphism            |
-| **Production Ready**        | Rate limiting, request timing, session TTL cleanup, configurable CORS                |
-| **Responsive Design**       | Mobile-first with hamburger menu, works on all screen sizes                          |
+| Feature                     | Description                                                                                |
+| --------------------------- | ------------------------------------------------------------------------------------------ |
+| **5-Layer Detection**       | Keyword → Pattern → India-specific → Behavioral → Confidence scoring                       |
+| **18+ Scam Types**          | Digital arrest, courier, KYC, UPI, lottery, investment, crypto, and more                   |
+| **Bilingual (EN + HI)**     | Full Hindi/Hinglish support — detection, agent responses, and LLM rephrasing               |
+| **Adaptive Agent**          | 15+ response pools × 2 languages (260+ phrases), context-aware rotation                    |
+| **Intelligence Extraction** | UPI IDs, bank accounts, phones, Aadhaar, PAN, emails, phishing links, crypto wallets       |
+| **LLM Enhancement**         | Groq Llama 3.3 70B via REST API with circuit breaker + auto-fallback (14,400 req/day free) |
+| **10 Simulation Scenarios** | Bank, UPI, lottery, KYC, digital arrest, courier, investment, job, utility scams           |
+| **Live Callbacks**          | Automatic GUVI platform reporting when sufficient intel gathered                           |
+| **Dark / Light Theme**      | Full dark + light theme system with CSS custom properties & glassmorphism                  |
+| **Production Ready**        | Rate limiting, request timing, session TTL cleanup, configurable CORS                      |
+| **Responsive Design**       | Mobile-first with hamburger menu, works on all screen sizes                                |
 
 ---
 
@@ -96,10 +96,10 @@ Create a `.env` file in the project root:
 ```env
 API_KEY=your-api-key-here
 CALLBACK_URL=https://your-guvi-callback-endpoint
-GEMINI_API_KEY=your-google-ai-key       # optional
-GEMINI_MODEL=gemini-2.5-flash-lite       # optional
-MONGODB_URI=mongodb+srv://...            # optional
-LLM_TIMEOUT_MS=5000                      # optional
+GROQ_API_KEY=your-groq-api-key          # from console.groq.com
+GROQ_MODEL=llama-3.3-70b-versatile       # default model
+MONGDB_URI=mongodb+srv://...            # optional
+LLM_TIMEOUT_MS=8000                      # optional
 ```
 
 Create `frontend/.env`:
@@ -109,14 +109,14 @@ VITE_API_URL=http://localhost:8000
 VITE_API_KEY=your-api-key-here
 ```
 
-| Variable         | Required | Description                                 |
-| ---------------- | -------- | ------------------------------------------- |
-| `API_KEY`        | Yes      | API key for auth (`x-api-key` header)       |
-| `CALLBACK_URL`   | Yes      | GUVI callback endpoint                      |
-| `GEMINI_API_KEY` | No       | Google AI API key (LLM phrasing)            |
-| `GEMINI_MODEL`   | No       | Model name (default: gemini-2.5-flash-lite) |
-| `MONGODB_URI`    | No       | MongoDB Atlas connection string             |
-| `LLM_TIMEOUT_MS` | No       | LLM timeout in ms (default: 8000)           |
+| Variable         | Required | Description                                   |
+| ---------------- | -------- | --------------------------------------------- |
+| `API_KEY`        | Yes      | API key for auth (`x-api-key` header)         |
+| `CALLBACK_URL`   | Yes      | GUVI callback endpoint                        |
+| `GROQ_API_KEY`   | Yes      | Groq API key (from console.groq.com)          |
+| `GROQ_MODEL`     | No       | Model name (default: llama-3.3-70b-versatile) |
+| `MONGODB_URI`    | No       | MongoDB Atlas connection string               |
+| `LLM_TIMEOUT_MS` | No       | LLM timeout in ms (default: 8000)             |
 
 ### 3. Run Development
 
@@ -190,7 +190,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --app-dir app
 **Live:** [https://trusthoneypot-api.up.railway.app](https://trusthoneypot-api.up.railway.app)
 
 1. Connect your GitHub repo to [Railway](https://railway.app)
-2. Set environment variables in Railway dashboard (`API_KEY`, `GEMINI_API_KEY`, `MONGODB_URI`, etc.)
+2. Set environment variables in Railway dashboard (`API_KEY`, `GROQ_API_KEY`, `MONGODB_URI`, etc.)
 3. Nixpacks auto-detects Python via `nixpacks.toml` and deploys with `uvicorn --app-dir app`
 4. Watch patterns: `app/**`, `requirements.txt`, `nixpacks.toml`, `railway.json`
 
@@ -214,7 +214,7 @@ trusthoneypot/
 │   ├── agent.py         # Honeypot agent (15+ response pools)
 │   ├── detector.py      # 5-layer scam detection engine
 │   ├── extractor.py     # Intelligence extraction (8 types)
-│   ├── llm.py           # Gemini REST API integration (httpx)
+│   ├── llm.py           # Groq Llama 3.3 70B integration (httpx)
 │   ├── db.py            # MongoDB persistence
 │   ├── memory.py        # In-memory session state
 │   ├── callback.py      # GUVI callback reporting
@@ -237,14 +237,14 @@ trusthoneypot/
 
 ## Tech Stack
 
-| Layer      | Technology                                           |
-| ---------- | ---------------------------------------------------- |
-| Backend    | Python 3.13, FastAPI, Pydantic v2, Uvicorn           |
-| Frontend   | React 18, Vite 6, Tailwind CSS 3, React Router 6     |
-| LLM        | Google Gemini 2.5 Flash-Lite via REST API (optional) |
-| Database   | MongoDB Atlas (optional)                             |
-| Icons      | Lucide React                                         |
-| Deployment | Railway (API), Vercel (UI)                           |
+| Layer      | Technology                                       |
+| ---------- | ------------------------------------------------ |
+| Backend    | Python 3.13, FastAPI, Pydantic v2, Uvicorn       |
+| Frontend   | React 18, Vite 6, Tailwind CSS 3, React Router 6 |
+| LLM        | Groq Llama 3.3 70B Versatile via REST API        |
+| Database   | MongoDB Atlas (optional)                         |
+| Icons      | Lucide React                                     |
+| Deployment | Railway (API), Vercel (UI)                       |
 
 ---
 

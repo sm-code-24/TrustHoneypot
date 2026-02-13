@@ -1,5 +1,5 @@
 """
-LLM Integration - Gemini for reply phrasing ONLY.
+LLM Integration - Groq (Llama 3.3 70B) for reply phrasing ONLY.
 
 ARCHITECTURAL INVARIANT:
 "LLM enhances realism, NEVER correctness."
@@ -13,7 +13,6 @@ It NEVER:
 - asks for OTP / passwords / credentials
 """
 import os
-import json
 import time
 import asyncio
 import logging
@@ -30,7 +29,7 @@ else:
 
 logger = logging.getLogger(__name__)
 
-# httpx for direct REST API calls (avoids google-genai SDK IPv6 issues)
+# httpx for async REST API calls
 try:
     import httpx
     HTTPX_AVAILABLE = True
@@ -38,7 +37,7 @@ except ImportError:
     HTTPX_AVAILABLE = False
     logger.warning("httpx not installed. LLM features disabled.")
 
-GEMINI_API_BASE = "https://generativelanguage.googleapis.com/v1beta"
+GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # Strict system prompt
 SYSTEM_PROMPT = """You are rephrasing a scam honeypot agent's reply to sound more natural and human-like.
@@ -69,26 +68,30 @@ STRICT RULES:
       Input (English reply): "Please wait, I am trying to understand."
       Output: "Wait wait, I am trying to understand ji... this technology is confusing."
 
+OUTPUT FORMAT:
+- Return ONLY the rephrased reply text, nothing else
+- Do NOT include any prefix like "Here is...", "Sure...", "Rephrased:", etc.
+- Do NOT include quotation marks around the reply
+- Do NOT add explanations, notes, or commentary
+
 You receive:
 - Strategy: The engagement strategy chosen by the rule engine
 - Original Reply: The rule-based reply to rephrase
-- Last Scammer Message: Context of what the scammer said
-
-Return ONLY the rephrased reply. Nothing else."""
+- Last Scammer Message: Context of what the scammer said"""
 
 
 class LLMService:
-    """Gemini REST API integration with async httpx, strict timeout and auto-fallback."""
+    """Groq LLM integration with async httpx, strict timeout and auto-fallback."""
 
     def __init__(self):
-        self.api_key = os.getenv("GEMINI_API_KEY", "")
+        self.api_key = os.getenv("GROQ_API_KEY", "")
+        self.model_name = os.getenv("GROQ_MODEL", "llama-3.3-70b-versatile")
         self.timeout_ms = int(os.getenv("LLM_TIMEOUT_MS", "8000"))
-        self.model_name = os.getenv("GEMINI_MODEL", "gemini-2.5-flash-lite")
         self.enabled = False
         self._client: Optional[httpx.AsyncClient] = None
         self._consecutive_failures = 0
         self._max_consecutive_failures = 5
-        self._backoff_until = 0.0  # timestamp until which we skip LLM calls
+        self._backoff_until = 0.0
         self._total_calls = 0
         self._total_successes = 0
         self._total_fallbacks = 0
@@ -96,18 +99,18 @@ class LLMService:
         self._configure()
 
     def _configure(self):
-        """Configure async httpx client for Gemini REST API."""
+        """Configure async httpx client for Groq REST API."""
+        logger.info(f"🤖 LLM INIT: httpx_available={HTTPX_AVAILABLE}, api_key_set={bool(self.api_key)}, api_key_len={len(self.api_key)}, model={self.model_name}")
         if not HTTPX_AVAILABLE:
-            logger.info("LLM service disabled: httpx not installed")
+            logger.warning("🤖 LLM service DISABLED: httpx not installed. Install with: pip install httpx")
             return
         if not self.api_key:
-            logger.info("LLM service disabled: GEMINI_API_KEY not set")
+            logger.warning("🤖 LLM service DISABLED: GROQ_API_KEY not set in environment variables")
             return
         try:
-            # Force IPv4 via custom transport to avoid IPv6 hanging on Windows
             transport = httpx.AsyncHTTPTransport(
                 retries=1,
-                local_address="0.0.0.0",  # Forces IPv4
+                local_address="0.0.0.0",
             )
             self._client = httpx.AsyncClient(
                 transport=transport,
@@ -117,12 +120,15 @@ class LLMService:
                     write=5.0,
                     pool=5.0,
                 ),
-                headers={"Content-Type": "application/json"},
+                headers={
+                    "Content-Type": "application/json",
+                    "Authorization": f"Bearer {self.api_key}",
+                },
             )
             self.enabled = True
-            logger.info(f"LLM service configured: model={self.model_name}, timeout={self.timeout_ms}ms (REST API, IPv4)")
+            logger.info(f"🤖 LLM service ENABLED: model={self.model_name}, timeout={self.timeout_ms}ms (Groq REST via httpx)")
         except Exception as e:
-            logger.error(f"Failed to configure LLM client: {e}")
+            logger.error(f"🤖 LLM service FAILED to configure: {e}", exc_info=True)
             self.enabled = False
 
     async def rephrase_reply(
@@ -138,6 +144,7 @@ class LLMService:
             (final_reply, source) where source is "llm" | "rule_based" | "rule_based_fallback"
         """
         if not self.enabled:
+            logger.warning(f"🤖 LLM SKIP: service not enabled (api_key_set={bool(self.api_key)}, httpx={HTTPX_AVAILABLE})")
             return rule_reply, "rule_based"
 
         # Circuit breaker: skip calls during backoff
@@ -203,83 +210,59 @@ class LLMService:
             )
 
     async def _generate(self, prompt: str) -> Optional[str]:
-        """Call Gemini REST API directly with async httpx (IPv4, proper timeouts)."""
+        """Call Groq API (OpenAI-compatible) with async httpx."""
         if not self._client:
             return None
 
-        url = f"{GEMINI_API_BASE}/models/{self.model_name}:generateContent"
-
         payload = {
-            "system_instruction": {
-                "parts": [{"text": SYSTEM_PROMPT}]
-            },
-            "contents": [
-                {
-                    "role": "user",
-                    "parts": [{"text": prompt}]
-                }
+            "model": self.model_name,
+            "messages": [
+                {"role": "system", "content": SYSTEM_PROMPT},
+                {"role": "user", "content": prompt},
             ],
-            "generationConfig": {
-                "maxOutputTokens": 150,
-                "temperature": 0.7,
-                "topP": 0.9,
-            }
+            "max_tokens": 150,
+            "temperature": 0.7,
+            "top_p": 0.9,
         }
 
         try:
-            response = await self._client.post(
-                url,
-                params={"key": self.api_key},
-                json=payload,
-            )
+            response = await self._client.post(GROQ_API_URL, json=payload)
 
             if response.status_code == 429:
-                # Rate limited — extract retry delay if available
-                error_data = response.json()
-                retry_delay = 30  # default
-                details = error_data.get("error", {}).get("details", [])
-                for d in details:
-                    if d.get("@type", "").endswith("RetryInfo"):
-                        delay_str = d.get("retryDelay", "30s").rstrip("s")
-                        try:
-                            retry_delay = int(float(delay_str))
-                        except ValueError:
-                            pass
+                retry_delay = 30
+                retry_after = response.headers.get("retry-after")
+                if retry_after:
+                    try:
+                        retry_delay = int(float(retry_after))
+                    except ValueError:
+                        pass
                 self._backoff_until = time.time() + retry_delay
-                logger.warning(f"LLM rate limited (429), backing off for {retry_delay}s")
+                logger.warning(f"Groq rate limited (429), backing off for {retry_delay}s")
                 return None
 
             if response.status_code != 200:
                 error_msg = response.text[:200]
-                logger.error(f"Gemini API error {response.status_code}: {error_msg}")
+                logger.error(f"Groq API error {response.status_code}: {error_msg}")
                 return None
 
             data = response.json()
+            choices = data.get("choices", [])
+            if choices:
+                content = choices[0].get("message", {}).get("content")
+                if content:
+                    return content
 
-            # Extract text from response
-            candidates = data.get("candidates", [])
-            if candidates:
-                content = candidates[0].get("content", {})
-                parts = content.get("parts", [])
-                if parts and "text" in parts[0]:
-                    return parts[0]["text"]
-
-            # Check for blocked response
-            block_reason = data.get("promptFeedback", {}).get("blockReason")
-            if block_reason:
-                logger.warning(f"Gemini blocked response: {block_reason}")
-            else:
-                logger.warning("Gemini returned empty response")
+            logger.warning("Groq returned empty response")
             return None
 
         except httpx.TimeoutException as e:
-            logger.warning(f"Gemini request timeout: {e}")
+            logger.warning(f"Groq request timeout: {e}")
             return None
         except httpx.ConnectError as e:
-            logger.error(f"Gemini connection error: {e}")
+            logger.error(f"Groq connection error: {e}")
             return None
         except Exception as e:
-            logger.error(f"Gemini API call failed: {e}")
+            logger.error(f"Groq API call failed: {e}")
             return None
 
     def _is_safe(self, reply: str) -> bool:

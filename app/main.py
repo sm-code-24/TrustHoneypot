@@ -213,18 +213,25 @@ async def process_message(
         
         # If LLM mode requested, try LLM rephrasing (works for ALL replies, not just confirmed scams)
         if response_mode == "llm":
-            strategy = agent.get_current_strategy(session_id)
-            try:
-                llm_reply, llm_source = await llm_service.rephrase_reply(
-                    strategy=strategy,
-                    rule_reply=agent_reply,
-                    scammer_message=current_message
-                )
-                agent_reply = llm_reply
-                reply_source = llm_source
-            except Exception as llm_err:
-                logger.warning(f"[{session_id[:8]}] [LLM] Rephrase failed: {llm_err}, using rule-based")
+            logger.info(f"[{session_id[:8]}] [LLM] Mode requested. enabled={llm_service.enabled}, api_key_set={bool(llm_service.api_key)}, model={llm_service.model_name}")
+            if not llm_service.enabled:
+                llm_status = llm_service.get_status()
+                logger.warning(f"[{session_id[:8]}] [LLM] NOT ENABLED — status: {json.dumps(llm_status)}")
                 reply_source = "rule_based_fallback"
+            else:
+                strategy = agent.get_current_strategy(session_id)
+                try:
+                    llm_reply, llm_source = await llm_service.rephrase_reply(
+                        strategy=strategy,
+                        rule_reply=agent_reply,
+                        scammer_message=current_message
+                    )
+                    agent_reply = llm_reply
+                    reply_source = llm_source
+                except Exception as llm_err:
+                    logger.warning(f"[{session_id[:8]}] [LLM] Rephrase failed: {llm_err}, using rule-based")
+                    print(f"[LLM] Rephrase failed: {llm_err}")
+                    reply_source = "rule_based_fallback"
         
         memory.set_agent_response(session_id, agent_reply)
         memory.add_message(session_id, "agent", agent_reply)
@@ -253,10 +260,13 @@ async def process_message(
         
         # Send callback if conditions met
         callback_sent = False
+        logger.info(f"[CALLBACK] [{session_id[:8]}] Checking eligibility: scam={scam_confirmed}, msgs={total_messages}, intel={json.dumps({k: len(v) if isinstance(v, list) else v for k, v in intelligence.items()}, ensure_ascii=False)}")
         callback_eligible = should_send_callback(scam_confirmed, total_messages, intelligence)
         
         if callback_eligible:
-            if not memory.is_callback_sent(session_id):
+            already_sent = memory.is_callback_sent(session_id)
+            logger.info(f"[CALLBACK] [{session_id[:8]}] ELIGIBLE! already_sent={already_sent}")
+            if not already_sent:
                 success = send_final_callback(session_id, total_messages, intelligence, agent_notes)
                 if success:
                     memory.mark_callback_sent(session_id)
@@ -339,7 +349,7 @@ async def process_message(
         # Log simplified response
         response_dict = response.model_dump()
         logger.info(f"[SESSION] [{session_id[:8]}] RESPONSE: {json.dumps(response_dict, ensure_ascii=False)}")
-        logger.info(f"[CALLBACK] [{session_id[:8]}] {'SENT' if callback_sent else 'not_sent'}")
+        logger.info(f"[CALLBACK] [{session_id[:8]}] FINAL_STATUS={'SENT ✅' if callback_sent else 'NOT_SENT ❌'} eligible={callback_eligible} already_sent_prev={memory.is_callback_sent(session_id) and not callback_sent}")
         
         return response
         
@@ -462,6 +472,32 @@ async def run_simulation(
             if success:
                 memory.mark_callback_sent(session_id)
                 callback_sent = True
+                # Save callback record to DB (was missing in simulation handler!)
+                db_service.save_callback_record(
+                    session_id=session_id,
+                    status="sent",
+                    payload_summary={
+                        "totalMessages": total_messages,
+                        "intelligenceCounts": intel_counts,
+                        "source": "simulation",
+                    }
+                )
+                logger.info(f"[SIM] [{session_id[:8]}] Callback record saved to DB")
+        
+        # Save session summary to DB (was missing in simulation handler!)
+        tactics_list = list(agent._get_context(session_id).get("detected_tactics", set()))
+        db_service.save_session_summary(
+            session_id=session_id,
+            scam_type=detection_details.scam_type or "unknown",
+            risk_level=detection_details.risk_level or "minimal",
+            confidence=detection_details.confidence,
+            message_count=total_messages,
+            scam_detected=scam_confirmed,
+            intelligence_counts=intel_counts,
+            tactics=tactics_list,
+            response_mode=reply_source,
+            callback_sent=memory.is_callback_sent(session_id),
+        )
         
         stage_info = agent.get_engagement_stage(session_id, msg_count, scam_confirmed, callback_sent or memory.is_callback_sent(session_id))
         

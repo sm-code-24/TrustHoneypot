@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Routes, Route, NavLink, useNavigate } from "react-router-dom";
+import { Routes, Route, NavLink, useNavigate, Link } from "react-router-dom";
 import {
   Shield,
   MessageSquare,
@@ -207,11 +207,12 @@ export default function Dashboard() {
           }}>
           <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
             &copy; {year}{" "}
-            <span
+            <Link
+              to="/about"
               style={{ color: "var(--text-tertiary)" }}
-              className="font-medium">
+              className="font-medium hover:underline">
               200 Hustlers
-            </span>
+            </Link>
             {" — "}TrustHoneypot — Made for AI Impact Buildathon PS-2
           </p>
         </footer>
