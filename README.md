@@ -31,8 +31,8 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 │                       │                                  │
 │               ┌───────▼───────┐                          │
 │               │ LLM Rephraser │  (optional)              │
-│               │ Gemini 2.0    │  timeout → fallback      │
-│               │   Flash       │                          │
+│               │ Gemini 2.5    │  circuit breaker +       │
+│               │  Flash-Lite   │  auto-fallback           │
 │               └───────────────┘                          │
 │                                                          │
 │               ┌───────────────┐                          │
@@ -60,7 +60,7 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 | **Bilingual (EN + HI)**     | Full Hindi/Hinglish support — detection, agent responses, and LLM rephrasing         |
 | **Adaptive Agent**          | 15+ response pools × 2 languages (260+ phrases), context-aware rotation              |
 | **Intelligence Extraction** | UPI IDs, bank accounts, phones, Aadhaar, PAN, emails, phishing links, crypto wallets |
-| **LLM Enhancement**         | Optional Gemini 2.0 Flash rephrasing with 5s timeout + auto-fallback                 |
+| **LLM Enhancement**         | Gemini 2.5 Flash-Lite via REST API with circuit breaker + auto-fallback              |
 | **10 Simulation Scenarios** | Bank, UPI, lottery, KYC, digital arrest, courier, investment, job, utility scams     |
 | **Live Callbacks**          | Automatic GUVI platform reporting when sufficient intel gathered                     |
 | **Dark / Light Theme**      | Full dark + light theme system with CSS custom properties & glassmorphism            |
@@ -97,7 +97,7 @@ Create a `.env` file in the project root:
 API_KEY=your-api-key-here
 CALLBACK_URL=https://your-guvi-callback-endpoint
 GEMINI_API_KEY=your-google-ai-key       # optional
-GEMINI_MODEL=gemini-2.0-flash            # optional
+GEMINI_MODEL=gemini-2.5-flash-lite       # optional
 MONGODB_URI=mongodb+srv://...            # optional
 LLM_TIMEOUT_MS=5000                      # optional
 ```
@@ -109,14 +109,14 @@ VITE_API_URL=http://localhost:8000
 VITE_API_KEY=your-api-key-here
 ```
 
-| Variable         | Required | Description                            |
-| ---------------- | -------- | -------------------------------------- |
-| `API_KEY`        | Yes      | API key for auth (`x-api-key` header)  |
-| `CALLBACK_URL`   | Yes      | GUVI callback endpoint                 |
-| `GEMINI_API_KEY` | No       | Google AI API key (LLM phrasing)       |
-| `GEMINI_MODEL`   | No       | Model name (default: gemini-2.0-flash) |
-| `MONGODB_URI`    | No       | MongoDB Atlas connection string        |
-| `LLM_TIMEOUT_MS` | No       | LLM timeout in ms (default: 5000)      |
+| Variable         | Required | Description                                 |
+| ---------------- | -------- | ------------------------------------------- |
+| `API_KEY`        | Yes      | API key for auth (`x-api-key` header)       |
+| `CALLBACK_URL`   | Yes      | GUVI callback endpoint                      |
+| `GEMINI_API_KEY` | No       | Google AI API key (LLM phrasing)            |
+| `GEMINI_MODEL`   | No       | Model name (default: gemini-2.5-flash-lite) |
+| `MONGODB_URI`    | No       | MongoDB Atlas connection string             |
+| `LLM_TIMEOUT_MS` | No       | LLM timeout in ms (default: 8000)           |
 
 ### 3. Run Development
 
@@ -214,7 +214,7 @@ trusthoneypot/
 │   ├── agent.py         # Honeypot agent (15+ response pools)
 │   ├── detector.py      # 5-layer scam detection engine
 │   ├── extractor.py     # Intelligence extraction (8 types)
-│   ├── llm.py           # Gemini Flash integration
+│   ├── llm.py           # Gemini REST API integration (httpx)
 │   ├── db.py            # MongoDB persistence
 │   ├── memory.py        # In-memory session state
 │   ├── callback.py      # GUVI callback reporting
@@ -237,14 +237,14 @@ trusthoneypot/
 
 ## Tech Stack
 
-| Layer      | Technology                                       |
-| ---------- | ------------------------------------------------ |
-| Backend    | Python 3.13, FastAPI, Pydantic v2, Uvicorn       |
-| Frontend   | React 18, Vite 6, Tailwind CSS 3, React Router 6 |
-| LLM        | Google Gemini 2.0 Flash (optional)               |
-| Database   | MongoDB Atlas (optional)                         |
-| Icons      | Lucide React                                     |
-| Deployment | Railway (API), Vercel (UI)                       |
+| Layer      | Technology                                           |
+| ---------- | ---------------------------------------------------- |
+| Backend    | Python 3.13, FastAPI, Pydantic v2, Uvicorn           |
+| Frontend   | React 18, Vite 6, Tailwind CSS 3, React Router 6     |
+| LLM        | Google Gemini 2.5 Flash-Lite via REST API (optional) |
+| Database   | MongoDB Atlas (optional)                             |
+| Icons      | Lucide React                                         |
+| Deployment | Railway (API), Vercel (UI)                           |
 
 ---
 

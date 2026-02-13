@@ -42,12 +42,12 @@ const TECH_STACK = [
     color: "from-purple-500 to-pink-400",
     items: [
       {
-        name: "Google Gemini",
-        desc: "gemini-2.0-flash model for bilingual (EN/HI) reply rephrasing",
+        name: "Google Gemini 2.5 Flash-Lite",
+        desc: "Fastest Gemini model for bilingual (EN/HI) reply rephrasing with generous free-tier limits",
       },
       {
-        name: "google-genai SDK",
-        desc: "Official Python client for Gemini API integration",
+        name: "httpx AsyncClient",
+        desc: "Direct REST API calls with IPv4 forced, circuit breaker, and production-grade timeouts",
       },
       {
         name: "Rule-Based Engine",

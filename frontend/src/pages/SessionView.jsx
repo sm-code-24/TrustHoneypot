@@ -415,7 +415,7 @@ export default function SessionView() {
     handleNewSession();
     setSimulating(true);
     setSimStages([]);
-    setShowPanel(true);
+    setShowPanel(false);
 
     try {
       const result = await runSimulation(scenarioId, mode);

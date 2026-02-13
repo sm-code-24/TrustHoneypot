@@ -128,6 +128,13 @@ async def startup_event():
     logger.info("API Ready | Docs: /docs | Health: GET / | Honeypot: POST /honeypot")
 
 
+@app.on_event("shutdown")
+async def shutdown_event():
+    """Clean up resources on shutdown."""
+    await llm_service.close()
+    logger.info("API shutdown complete")
+
+
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Log validation errors clearly."""

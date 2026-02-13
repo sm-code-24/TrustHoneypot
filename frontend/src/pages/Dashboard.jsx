@@ -46,7 +46,12 @@ export default function Dashboard() {
   const SidebarContent = () => (
     <>
       {/* Logo */}
-      <div className="flex items-center gap-2.5 px-4 pt-5 pb-6">
+      <div
+        className="flex items-center gap-2.5 px-4 pt-5 pb-6 cursor-pointer"
+        onClick={() => {
+          setSidebarOpen(false);
+          navigate("/");
+        }}>
         <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
           <Shield size={16} className="text-white" />
         </div>
