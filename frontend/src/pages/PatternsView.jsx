@@ -334,7 +334,7 @@ export default function PatternsView() {
             </p>
           )}
           {topTactics.map((t, i) => {
-            const pct = ((t.count / maxTacticCount) * 100).toFixed(0);
+            const pct = Math.round((t.count / maxTacticCount) * 100);
             return (
               <div
                 key={t._id || i}
@@ -358,8 +358,12 @@ export default function PatternsView() {
                     className="h-2 rounded-full mt-1.5 overflow-hidden"
                     style={{ background: "var(--bar-track)" }}>
                     <div
-                      className="h-full rounded-full bg-emerald-500 transition-all duration-700"
-                      style={{ width: `${pct}%` }}
+                      className="h-full rounded-full transition-all duration-700"
+                      style={{
+                        width: `${pct}%`,
+                        background:
+                          "linear-gradient(90deg, #10b981 0%, #059669 100%)",
+                      }}
                     />
                   </div>
                 </div>

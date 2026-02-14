@@ -219,7 +219,7 @@ export default function CallbacksView() {
           </h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm table-fixed">
+          <table className="w-full text-sm">
             <thead>
               <tr
                 className="text-xs border-b"
@@ -227,19 +227,29 @@ export default function CallbacksView() {
                   color: "var(--text-tertiary)",
                   borderColor: "var(--border-primary)",
                 }}>
-                <th className="text-left px-4 py-2.5 font-medium w-[15%]">
+                <th
+                  className="text-left px-3 py-3 font-semibold"
+                  style={{ width: "11%" }}>
                   Session
                 </th>
-                <th className="text-center px-4 py-2.5 font-medium w-[10%]">
+                <th
+                  className="text-center px-2 py-3 font-semibold"
+                  style={{ width: "7%" }}>
                   Status
                 </th>
-                <th className="text-left px-4 py-2.5 font-medium w-[20%]">
+                <th
+                  className="text-left px-3 py-3 font-semibold"
+                  style={{ width: "23%" }}>
                   Fraud Type
                 </th>
-                <th className="text-left px-4 py-2.5 font-medium w-[20%] hidden sm:table-cell">
+                <th
+                  className="text-left px-3 py-3 font-semibold hidden sm:table-cell"
+                  style={{ width: "24%" }}>
                   Time
                 </th>
-                <th className="text-left px-4 py-2.5 font-medium w-[35%]">
+                <th
+                  className="text-left px-3 py-3 font-semibold"
+                  style={{ width: "35%" }}>
                   Payload
                 </th>
               </tr>
@@ -268,17 +278,19 @@ export default function CallbacksView() {
                 return (
                   <tr
                     key={i}
-                    className="border-b transition-colors align-top"
-                    style={{ borderColor: "var(--border-primary)" }}>
+                    className="border-b transition-colors hover:bg-opacity-50"
+                    style={{
+                      borderColor: "var(--border-primary)",
+                    }}>
                     <td
-                      className="px-4 py-2.5 font-mono text-xs w-[15%]"
+                      className="px-3 py-3.5 font-mono text-xs align-middle"
                       style={{ color: "var(--text-secondary)" }}>
                       {(cb.session_id || "").slice(0, 8)}
                     </td>
-                    <td className="px-4 py-2.5 w-[10%]">
+                    <td className="px-2 py-3.5 align-middle">
                       <div className="flex items-center justify-center">
                         <StatusIcon
-                          size={14}
+                          size={16}
                           className={statusColor}
                           style={
                             !statusColor ?
@@ -288,11 +300,11 @@ export default function CallbacksView() {
                         />
                       </div>
                     </td>
-                    <td className="px-4 py-2.5 w-[20%]">
+                    <td className="px-3 py-3.5 align-middle">
                       <FraudBadge label={cb.fraud_type || "GENERIC SCAM"} />
                     </td>
                     <td
-                      className="px-4 py-2.5 text-xs w-[20%] hidden sm:table-cell"
+                      className="px-3 py-3.5 text-xs hidden sm:table-cell align-middle"
                       style={{ color: "var(--text-tertiary)" }}>
                       {cb.timestamp ?
                         new Date(cb.timestamp).toLocaleString("en-IN", {
@@ -302,7 +314,7 @@ export default function CallbacksView() {
                         })
                       : "—"}
                     </td>
-                    <td className="px-4 py-2.5 w-[35%]">
+                    <td className="px-3 py-3.5 align-middle">
                       <PayloadDrawer
                         data={cb.payload_summary}
                         intelligence={cb.intelligence}
