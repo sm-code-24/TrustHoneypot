@@ -164,11 +164,22 @@ export default function PatternsView() {
             )}
             {scamTypes.map((s) => {
               const pct = ((s.count / maxTypeCount) * 100).toFixed(0);
+              const label = (s._id || "unknown").replace(/_/g, " ");
+              const upper = label.toUpperCase();
+              const barColor =
+                upper.includes("PAYMENT") ? "from-red-500 to-red-400"
+                : upper.includes("KYC") || upper.includes("PHISHING") ?
+                  "from-amber-500 to-amber-400"
+                : upper.includes("LOTTERY") ? "from-purple-500 to-purple-400"
+                : upper.includes("IMPERSONATION") ? "from-blue-500 to-blue-400"
+                : "from-slate-500 to-slate-400";
               return (
                 <div key={s._id} className="space-y-1">
                   <div className="flex justify-between text-xs">
-                    <span style={{ color: "var(--text-secondary)" }}>
-                      {(s._id || "unknown").replace(/_/g, " ")}
+                    <span
+                      className="font-medium uppercase tracking-wide"
+                      style={{ color: "var(--text-secondary)" }}>
+                      {label}
                     </span>
                     <span style={{ color: "var(--text-tertiary)" }}>
                       {s.count}
@@ -178,7 +189,7 @@ export default function PatternsView() {
                     className="h-1.5 rounded-full overflow-hidden"
                     style={{ background: "var(--bar-track)" }}>
                     <div
-                      className="h-full rounded-full bg-gradient-to-r from-blue-500 to-purple-500 transition-all duration-700"
+                      className={`h-full rounded-full bg-gradient-to-r ${barColor} transition-all duration-700`}
                       style={{ width: `${pct}%` }}
                     />
                   </div>

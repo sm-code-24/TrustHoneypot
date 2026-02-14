@@ -337,6 +337,7 @@ async def process_message(
             "suspiciousKeywords": len(intelligence.get("suspiciousKeywords", [])),
         }
         tactics_list = list(agent._get_context(session_id).get("detected_tactics", set()))
+        fraud_label = classify_fraud_type(detection_details.scam_type or "unknown")
         db_service.save_session_summary(
             session_id=session_id,
             scam_type=detection_details.scam_type or "unknown",
@@ -349,6 +350,7 @@ async def process_message(
             response_mode=reply_source,
             callback_sent=memory.is_callback_sent(session_id),
             intelligence=intelligence,
+            fraud_type=fraud_label,
         )
         
         # Register intelligence in the registry (v2.1)
@@ -622,6 +624,7 @@ async def run_simulation(
         
         # Save session summary to DB (was missing in simulation handler!)
         tactics_list = list(agent._get_context(session_id).get("detected_tactics", set()))
+        fraud_label = classify_fraud_type(detection_details.scam_type or "unknown")
         db_service.save_session_summary(
             session_id=session_id,
             scam_type=detection_details.scam_type or "unknown",
@@ -634,6 +637,7 @@ async def run_simulation(
             response_mode=reply_source,
             callback_sent=memory.is_callback_sent(session_id),
             intelligence=intelligence,
+            fraud_type=fraud_label,
         )
         
         stage_info = agent.get_engagement_stage(session_id, msg_count, scam_confirmed, callback_sent or memory.is_callback_sent(session_id))

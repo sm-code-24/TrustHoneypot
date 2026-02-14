@@ -83,6 +83,7 @@ class DatabaseService:
         response_mode: str = "rule_based",
         callback_sent: bool = False,
         intelligence: dict = None,
+        fraud_type: str = "GENERIC SCAM",
     ):
         """Persist a session summary with intelligence data."""
         if not self.enabled:
@@ -92,6 +93,7 @@ class DatabaseService:
             doc = {
                 "sessionId": session_id,
                 "scamType": scam_type,
+                "fraudType": fraud_type,
                 "riskLevel": risk_level,
                 "confidence": confidence,
                 "messageCount": message_count,
@@ -210,7 +212,7 @@ class DatabaseService:
         try:
             pipeline_type = [
                 {"$match": {"scamDetected": True}},
-                {"$group": {"_id": "$scamType", "count": {"$sum": 1}}},
+                {"$group": {"_id": {"$ifNull": ["$fraudType", "$scamType"]}, "count": {"$sum": 1}}},
                 {"$sort": {"count": -1}}
             ]
             pipeline_risk = [

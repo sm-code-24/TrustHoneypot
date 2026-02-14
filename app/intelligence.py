@@ -411,12 +411,14 @@ class PatternCorrelationService:
                     )
 
             # Upsert this session's pattern
+            fraud_label = classify_fraud_type(scam_type)
             coll.update_one(
                 {"sessionId": session_id},
                 {"$set": {
                     "sessionId": session_id,
                     "patternHash": pattern_hash,
                     "scamType": scam_type,
+                    "fraudType": fraud_label,
                     "tactics": tactics,
                     "identifierTypes": list(set(_detect_identifier_type(i) for i in identifiers)) if identifiers else [],
                     "riskLevel": risk_level,
@@ -448,6 +450,7 @@ class PatternCorrelationService:
                     "_id": "$patternHash",
                     "count": {"$sum": 1},
                     "scamType": {"$first": "$scamType"},
+                    "fraudType": {"$first": "$fraudType"},
                     "tactics": {"$first": "$tactics"},
                 }},
                 {"$sort": {"count": -1}},
@@ -456,7 +459,7 @@ class PatternCorrelationService:
             top = list(coll.aggregate(pipeline))
             recurring = sum(1 for p in top if p["count"] > 1)
             total = coll.count_documents({})
-            scam_types = set(p.get("scamType", "unknown") for p in top)
+            scam_types = set(p.get("fraudType") or classify_fraud_type(p.get("scamType", "unknown")) for p in top)
             avg_sim = round(recurring / max(len(top), 1), 2) if top else 0.0
             return {
                 "total_patterns": total,
@@ -464,7 +467,7 @@ class PatternCorrelationService:
                     {
                         "hash": p["_id"],
                         "count": p["count"],
-                        "scam_type": p.get("scamType", "unknown"),
+                        "scam_type": p.get("fraudType") or classify_fraud_type(p.get("scamType", "unknown")),
                         "tactics": p.get("tactics", [])[:5],
                     }
                     for p in top
