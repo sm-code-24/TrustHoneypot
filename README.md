@@ -1,9 +1,9 @@
 # TrustHoneypot v2.1 — Scam Intelligence Command Center
 
-> **India AI Impact Buildathon 2026— Problem Statement 2**  
+> **Scam Intelligence Platform — Solving Real-World Fraud**  
 > Team: **200 Hustlers** (Shailav · Bhupendra · Shivam · Gungun)
 
-An agentic honeypot that **engages scammers** with believable human-like conversations, **extracts financial intelligence** (UPI IDs, bank accounts, phone numbers, Aadhaar, PAN, phishing links), and **reports findings** via automated callbacks — all in real-time.
+An agentic honeypot that **engages scammers** with believable human-like conversations, **extracts financial intelligence** (UPI IDs, bank accounts, phone numbers, Aadhaar, PAN, phishing links), and **reports findings** to government portals — all in real-time.
 
 **Live Demo:**
 
@@ -25,8 +25,8 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 │                                                          │
 │  ┌──────────┐  ┌──────────┐  ┌───────────┐  ┌────────┐ │
 │  │ Detector │  │  Agent   │  │ Extractor │  │Callback│ │
-│  │ 5-layer  │  │15+ pools │  │ 8 types   │  │  GUVI  │ │
-│  │ scoring  │  │ rotation │  │ regex+NLP │  │endpoint│ │
+│  │ 5-layer  │  │15+ pools │  │ 8 types   │  │  Govt  │ │
+│  │ scoring  │  │ rotation │  │ regex+NLP │  │ Portal │ │
 │  └──────────┘  └──────┬───┘  └───────────┘  └────────┘ │
 │                       │                                  │
 │               ┌───────▼───────┐                          │
@@ -64,9 +64,9 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 | **Fraud Type Classification** | Professional labels (PAYMENT FRAUD, KYC PHISHING, etc.) with color-coded badges              |
 | **Excel Export**              | One-click export of intelligence registry as styled .xlsx workbook                           |
 | **Structured Reasoning**      | Detection verdicts with human-readable reasons explaining classification decisions           |
-| **LLM Enhancement**           | Groq Llama 3.3 70B via REST API with circuit breaker + auto-fallback (14,400 req/day free)   |
+| **LLM Enhancement**           | Groq Llama 3.3 70B via REST API with circuit breaker + auto-fallback (1000 req/day free)     |
 | **10 Simulation Scenarios**   | Bank, UPI, lottery, KYC, digital arrest, courier, investment, job, utility scams             |
-| **Live Callbacks**            | Automatic GUVI platform reporting when sufficient intel gathered                             |
+| **Live Callbacks**            | Automatic government portal reporting when sufficient intel gathered                         |
 | **Dark / Light Theme**        | Full dark + light theme system with CSS custom properties & glassmorphism                    |
 | **Production Ready**          | Rate limiting, request timing, session TTL cleanup, configurable CORS                        |
 
@@ -82,7 +82,7 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/your-repo/trusthoneypot.git
+git clone https://github.com/sm-code-24/trusthoneypot.git
 cd trusthoneypot
 
 # Backend
@@ -98,7 +98,7 @@ Create a `.env` file in the project root:
 
 ```env
 API_KEY=your-api-key-here
-CALLBACK_URL=https://your-guvi-callback-endpoint
+CALLBACK_URL=https://your-govt-portal-endpoint
 GROQ_API_KEY=your-groq-api-key          # from console.groq.com
 GROQ_MODEL=llama-3.3-70b-versatile       # default model
 MONGDB_URI=mongodb+srv://...            # optional
@@ -115,7 +115,7 @@ VITE_API_KEY=your-api-key-here
 | Variable         | Required | Description                                   |
 | ---------------- | -------- | --------------------------------------------- |
 | `API_KEY`        | Yes      | API key for auth (`x-api-key` header)         |
-| `CALLBACK_URL`   | Yes      | GUVI callback endpoint                        |
+| `CALLBACK_URL`   | Yes      | Government portal callback endpoint           |
 | `GROQ_API_KEY`   | Yes      | Groq API key (from console.groq.com)          |
 | `GROQ_MODEL`     | No       | Model name (default: llama-3.3-70b-versatile) |
 | `MONGODB_URI`    | No       | MongoDB Atlas connection string               |
@@ -233,7 +233,7 @@ trusthoneypot/
 │   ├── llm.py           # Groq Llama 3.3 70B integration (httpx)
 │   ├── db.py            # MongoDB persistence + indexes
 │   ├── memory.py        # In-memory session state
-│   ├── callback.py      # GUVI callback reporting
+│   ├── callback.py      # Government portal callback reporting
 │   ├── auth.py          # API key middleware
 │   └── models.py        # Pydantic request/response
 ├── frontend/
@@ -266,6 +266,6 @@ trusthoneypot/
 
 ## License
 
-MIT — Built with purpose for the India AI Impact Buildathon 2026.
+MIT — Built with purpose for real-world scam intelligence gathering.
 
 **© 2026 200 Hustlers — TrustHoneypot**

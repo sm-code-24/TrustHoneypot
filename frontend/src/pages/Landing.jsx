@@ -132,7 +132,7 @@ export default function Landing() {
           <span
             className="hidden sm:block text-xs font-mono tracking-wider"
             style={{ color: "var(--text-muted)" }}>
-            AI IMPACT BUILDATHON — PS-2
+            SCAM INTELLIGENCE PLATFORM
           </span>
           <button
             onClick={toggle}
@@ -191,7 +191,7 @@ export default function Landing() {
             color: "var(--gradient-text-1)",
           }}>
           <Sparkles size={12} className="animate-pulse" />
-          India AI Impact Buildathon 2026
+          Scam Intelligence Platform — India
         </div>
 
         {/* Animated cycling word */}
@@ -371,7 +371,7 @@ export default function Landing() {
             style={{ color: "var(--text-tertiary)" }}>
             200 Hustlers
           </Link>
-          {" — "}TrustHoneypot v2.1 — Made for AI Impact Buildathon PS-2
+          {" — "}TrustHoneypot v2.1 — Scam Intelligence Platform
         </p>
       </footer>
     </div>

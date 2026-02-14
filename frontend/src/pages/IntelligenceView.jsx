@@ -373,7 +373,7 @@ export default function IntelligenceView() {
   return (
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-2">
         <div className="flex items-center gap-2">
           <BarChart3 size={18} className="text-blue-400" />
           <h2
@@ -456,7 +456,7 @@ export default function IntelligenceView() {
       </div>
 
       {/* Risk Filter + Search */}
-      <div className="flex items-center gap-3">
+      <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1.5">
           {["critical", "high", "medium", "low"].map((r) => (
             <button
@@ -470,7 +470,7 @@ export default function IntelligenceView() {
             </button>
           ))}
         </div>
-        <div className="flex-1 flex items-center gap-2 glass rounded-lg px-3 py-1.5">
+        <div className="flex-1 min-w-[200px] flex items-center gap-2 glass rounded-lg px-3 py-1.5">
           <Search size={13} style={{ color: "var(--text-muted)" }} />
           <input
             value={search}

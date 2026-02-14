@@ -176,7 +176,7 @@ export default function CallbacksView() {
           Callback Reports
         </h2>
       </div>
-      <div className="grid grid-cols-3 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
         <div
           className="glass rounded-xl p-4 text-center card-hover border"
           style={{ borderColor: "var(--border-primary)" }}>
@@ -269,16 +269,18 @@ export default function CallbacksView() {
                       style={{ color: "var(--text-secondary)" }}>
                       {(cb.session_id || "").slice(0, 8)}
                     </td>
-                    <td className="px-5 py-2.5 text-center">
-                      <StatusIcon
-                        size={14}
-                        className={statusColor}
-                        style={
-                          !statusColor ?
-                            { color: "var(--text-muted)" }
-                          : undefined
-                        }
-                      />
+                    <td className="px-5 py-2.5">
+                      <div className="flex items-center justify-center">
+                        <StatusIcon
+                          size={14}
+                          className={statusColor}
+                          style={
+                            !statusColor ?
+                              { color: "var(--text-muted)" }
+                            : undefined
+                          }
+                        />
+                      </div>
                     </td>
                     <td className="px-5 py-2.5">
                       <FraudBadge label={cb.fraud_type || "GENERIC SCAM"} />

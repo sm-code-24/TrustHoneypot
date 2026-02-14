@@ -1,8 +1,9 @@
 """
-Callback module for reporting results to GUVI evaluation endpoint.
+Callback module for reporting scam intelligence to government portals.
 
-This is a MANDATORY part of the hackathon requirements. Without sending
-this callback, our submission won't be properly evaluated.
+When the honeypot gathers enough evidence on a confirmed scam, this module
+automatically submits the extracted intelligence to the configured
+government reporting endpoint.
 """
 import requests
 import os
@@ -15,8 +16,8 @@ load_dotenv()
 
 logger = logging.getLogger(__name__)
 
-# The GUVI endpoint where we submit our final results
-CALLBACK_URL = os.getenv("CALLBACK_URL", "https://hackathon.guvi.in/api/updateHoneyPotFinalResult")
+# Government portal endpoint where we submit scam intelligence
+CALLBACK_URL = os.getenv("CALLBACK_URL", "")
 
 # File to store callback history for debugging/audit
 CALLBACK_LOG_FILE = "callback_history.json"
@@ -60,7 +61,7 @@ def send_final_callback(
     agent_notes: str
 ) -> bool:
     """
-    Send final results to the GUVI hackathon evaluation API.
+    Send final scam intelligence to the configured government portal.
     
     This gets called once per session when we have:
     - Confirmed it's a scam
@@ -70,7 +71,7 @@ def send_final_callback(
     Returns True if the callback was accepted, False otherwise.
     """
     try:
-        # Build payload matching the exact format GUVI expects
+        # Build payload matching the expected government portal format
         payload = {
             "sessionId": session_id,
             "scamDetected": True,
@@ -123,7 +124,7 @@ def should_send_callback(scam_detected: bool, total_messages: int, intelligence:
     """
     Check if conditions are met to send the callback.
     
-    Per hackathon requirements, callback should only be sent when:
+    Callback should only be sent when:
     1. Scam intent is confirmed (scamDetected = true)
     2. AI Agent has completed sufficient engagement (3+ messages)
     3. Intelligence extraction is finished (at least one intel item)

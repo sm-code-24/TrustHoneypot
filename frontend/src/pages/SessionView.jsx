@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect, useCallback } from "react";
-import { sendMessage, fetchScenarios, runSimulation } from "../api";
+import { sendMessage, fetchScenarios, fetchScenarioDetail } from "../api";
 import {
   Send,
   AlertTriangle,
@@ -432,50 +432,139 @@ export default function SessionView() {
     }
   };
 
-  /* ── Auto-simulation handler ── */
+  /* ── Auto-simulation handler (step-by-step through /honeypot) ── */
+  const simAbortRef = useRef(false);
+
   const handleSimulate = async (scenarioId) => {
     if (simulating || loading) return;
 
-    // Reset state
+    // Reset state for fresh simulation
     handleNewSession();
     setSimulating(true);
     setSimStages([]);
     setShowPanel(false);
+    simAbortRef.current = false;
 
     try {
-      const result = await runSimulation(scenarioId, mode);
+      // Fetch scenario details including all scammer messages
+      const scenario = await fetchScenarioDetail(scenarioId);
+      const scammerMessages = scenario.messages || [];
+      if (scammerMessages.length === 0)
+        throw new Error("Scenario has no messages");
 
-      // Display messages one by one with delay for typing effect
-      const conv = result.conversation || [];
-      for (let i = 0; i < conv.length; i++) {
-        const m = conv[i];
-        await new Promise((r) =>
-          setTimeout(r, m.sender === "scammer" ? 800 : 500),
-        );
+      // We'll build conversation history as we go, just like a real chat
+      let history = [];
+      let currentSessionId = null;
+
+      for (let i = 0; i < scammerMessages.length; i++) {
+        if (simAbortRef.current) break;
+
+        const scammerText = scammerMessages[i];
+
+        // ─── Show scammer message with typing delay ───
+        // Delay scales with message length (min 1.5s, max 3.5s)
+        const scammerDelay = Math.min(1500 + scammerText.length * 12, 3500);
+        await new Promise((r) => setTimeout(r, scammerDelay));
+
+        if (simAbortRef.current) break;
+
+        // Use the session ID that was set by handleNewSession
+        // We need to capture it from state via a ref-like pattern
+        const simSessionId = currentSessionId || sessionId;
+        if (!currentSessionId) currentSessionId = simSessionId;
+
+        // Display scammer message
         setMessages((prev) => [
           ...prev,
           {
             id: uid(),
-            sender: m.sender,
-            text: m.text,
+            sender: "scammer",
+            text: scammerText,
             ts: Date.now(),
-            source: m.reply_source || undefined,
-            simStep: m.step,
+            simStep: i + 1,
           },
         ]);
-      }
 
-      // Set analysis and stage progression
-      if (result.final_analysis) {
-        setAnalysis({
-          ...result.final_analysis,
-          stage_info:
-            result.stage_progression?.length > 0 ?
-              result.stage_progression[result.stage_progression.length - 1]
-            : null,
-        });
+        // Brief pause to show "analyzing" indicator before agent reply
+        await new Promise((r) => setTimeout(r, 800));
+        if (simAbortRef.current) break;
+
+        // ─── Send through /honeypot for real analysis ───
+        try {
+          const data = await sendMessage(
+            simSessionId,
+            scammerText,
+            history,
+            mode,
+          );
+
+          // Show fallback warning if LLM was requested but failed
+          if (mode === "llm" && data.reply_source === "rule_based_fallback") {
+            setMessages((prev) => [
+              ...prev,
+              {
+                id: uid(),
+                sender: "system",
+                text: "LLM unavailable — using rule-based fallback.",
+                ts: Date.now(),
+              },
+            ]);
+          }
+
+          // Display agent response
+          const agentReply = data.reply || "";
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: uid(),
+              sender: "agent",
+              text: agentReply,
+              ts: Date.now(),
+              source: data.reply_source || "rule_based",
+              simStep: i + 1,
+            },
+          ]);
+
+          // ─── Update analysis panel after EVERY step ───
+          setAnalysis(data);
+
+          // Track stage progression
+          if (data.stage_info) {
+            setSimStages((prev) => [
+              ...prev,
+              {
+                step: i + 1,
+                stage: data.stage_info.stage,
+                label: data.stage_info.label,
+                progress: data.stage_info.progress,
+                agent_confidence: data.stage_info.agent_confidence || 0,
+              },
+            ]);
+          }
+
+          // Build history for next message
+          history.push({ sender: "scammer", text: scammerText });
+          history.push({ sender: "agent", text: agentReply });
+
+          // If callback was sent, simulation is done
+          if (data.callback_sent) break;
+        } catch (err) {
+          setMessages((prev) => [
+            ...prev,
+            {
+              id: uid(),
+              sender: "system",
+              text: `Step ${i + 1} error: ${err.message}`,
+              ts: Date.now(),
+            },
+          ]);
+        }
+
+        // Pause between rounds so user can read the exchange
+        if (i < scammerMessages.length - 1) {
+          await new Promise((r) => setTimeout(r, 1200));
+        }
       }
-      setSimStages(result.stage_progression || []);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -489,6 +578,10 @@ export default function SessionView() {
     } finally {
       setSimulating(false);
     }
+  };
+
+  const stopSimulation = () => {
+    simAbortRef.current = true;
   };
 
   const handleNewSession = () => {
@@ -528,12 +621,21 @@ export default function SessionView() {
           </div>
           <div className="flex items-center gap-2 sm:gap-3">
             <ModeSlider mode={mode} onChange={setMode} />
-            <ScenarioSelector
-              scenarios={scenarios}
-              onSelect={handleSimulate}
-              loading={simulating}
-              disabled={loading}
-            />
+            {simulating ?
+              <button
+                onClick={stopSimulation}
+                className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30"
+                title="Stop simulation">
+                <Square size={12} />
+                <span className="hidden xs:inline">Stop</span>
+              </button>
+            : <ScenarioSelector
+                scenarios={scenarios}
+                onSelect={handleSimulate}
+                loading={simulating}
+                disabled={loading}
+              />
+            }
             <button
               onClick={handleNewSession}
               className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all border hover:bg-blue-500/5"

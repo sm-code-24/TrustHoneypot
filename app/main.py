@@ -1,10 +1,10 @@
 """
 Agentic Honey-Pot API v2.1.0
-Built for the India AI Impact Buildathon (GUVI) - Problem Statement 2
+Scam Intelligence Platform — Problem Statement 2
 
 This is the main entry point for the honeypot system. It receives suspected
-scam messages from the GUVI platform, analyzes them, generates responses,
-extracts intelligence, and reports back when we've gathered enough info.
+scam messages, analyzes them, generates responses, extracts intelligence,
+and reports findings to configured government portals.
 """
 import os
 from pathlib import Path
@@ -64,7 +64,7 @@ logger = logging.getLogger(__name__)
 # Create the FastAPI app
 app = FastAPI(
     title="Agentic Honey-Pot API",
-    description="Scam Detection & Intelligence Extraction for GUVI Hackathon",
+    description="Scam Detection & Intelligence Extraction Platform",
     version="2.1.0",
     docs_url="/docs" if os.getenv("ENVIRONMENT", "development") != "production" else None,
     redoc_url=None,
@@ -475,6 +475,31 @@ def _get_scam_stage(msg_count: int, scam_confirmed: bool, callback_sent: bool) -
 async def get_scenarios(api_key: str = Depends(verify_api_key)):
     """List available demo scam scenarios for auto-simulation."""
     return {"scenarios": simulator.get_scenarios()}
+
+
+@app.get("/scenarios/{scenario_id}")
+async def get_scenario_detail(scenario_id: str, api_key: str = Depends(verify_api_key)):
+    """
+    Get full scenario details including messages for step-by-step simulation.
+    
+    The frontend uses this to drive simulations message-by-message through
+    the /honeypot endpoint, allowing real-time analysis updates after each step.
+    """
+    scenario = simulator.get_scenario(scenario_id)
+    if not scenario:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Scenario '{scenario_id}' not found."
+        )
+    return {
+        "id": scenario["id"],
+        "name": scenario["name"],
+        "description": scenario["description"],
+        "language": scenario["language"],
+        "scam_type": scenario["scam_type"],
+        "difficulty": scenario["difficulty"],
+        "messages": scenario["messages"],
+    }
 
 
 @app.post("/simulate", response_model=SimulationResponse)

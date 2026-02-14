@@ -142,7 +142,7 @@ export default function AboutView() {
             <p
               className="text-xs mt-0.5"
               style={{ color: "var(--text-tertiary)" }}>
-              India AI Impact Buildathon — Problem Statement 2
+              Scam Intelligence Platform — India
             </p>
           </div>
         </div>
@@ -243,7 +243,7 @@ export default function AboutView() {
 
       {/* Key numbers */}
       <div className="glass rounded-2xl p-6 md:p-8">
-        <div className="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
+        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-4 text-center">
           {[
             { value: "18+", label: "Scam Categories" },
             { value: "5", label: "Detection Layers" },

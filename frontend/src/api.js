@@ -1,5 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_URL || "";
-const API_KEY = import.meta.env.VITE_API_KEY || "default-hackathon-key-2026";
+const API_KEY = import.meta.env.VITE_API_KEY || "default-api-key-2026";
 
 /* eslint-disable no-console */
 const logErr = (tag, ...args) => console.error(`[TH:${tag}]`, ...args);
@@ -89,6 +89,21 @@ export async function fetchScenarios() {
   }
   const data = await res.json();
   return data.scenarios || [];
+}
+
+// Fetch a single scenario including its messages (for step-by-step simulation)
+export async function fetchScenarioDetail(scenarioId) {
+  const res = await fetch(
+    `${API_BASE}/scenarios/${encodeURIComponent(scenarioId)}`,
+    {
+      headers: headers(),
+    },
+  );
+  if (!res.ok) {
+    logErr("API", `fetchScenarioDetail failed: HTTP ${res.status}`);
+    throw new Error(`API error: ${res.status}`);
+  }
+  return await res.json();
 }
 
 export async function runSimulation(scenarioId, responseMode = "rule_based") {

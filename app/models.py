@@ -40,17 +40,17 @@ class Metadata(BaseModel):
 
 class HoneypotRequest(BaseModel):
     """
-    Incoming request from the GUVI evaluation platform.
+    Incoming scam message request.
     
-    The platform sends scam messages here for our system to analyze
-    and respond to. Each request has a sessionId to track multi-turn
-    conversations with the same scammer.
+    External systems or the frontend send suspected scam messages here
+    for analysis and response. Each request has a sessionId to track
+    multi-turn conversations with the same scammer.
     """
     model_config = ConfigDict(extra="ignore")  # tolerate extra fields from testers
     sessionId: str
     message: Message
     conversationHistory: List[Message] = Field(default_factory=list)
-    metadata: Optional[Metadata] = None  # Optional as per GUVI docs
+    metadata: Optional[Metadata] = None  # Optional contextual metadata
     timestamp: Optional[Union[str, int]] = None  # Some testers send timestamp at root level
     response_mode: Optional[str] = Field(default="rule_based", description="rule_based or llm")
 
@@ -114,7 +114,7 @@ class SimulationResponse(BaseModel):
 
 class CallbackPayload(BaseModel):
     """
-    Payload for the mandatory GUVI callback.
+    Payload for the government portal callback.
     We send this when we've gathered enough intel on a confirmed scam.
     """
     sessionId: str

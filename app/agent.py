@@ -11,6 +11,7 @@ when they think they've got a real victim on the hook.
 
 The responses are designed to be believable. No one talks like a robot.
 """
+import re
 import random
 import logging
 from typing import Dict, List, Optional
@@ -84,23 +85,24 @@ class HoneypotAgent:
     # Neutral responses for non-scam / uncertain cases
     # These should keep the conversation OPEN, not dismiss the caller.
     # Even for uncertain messages, we want to stay engaged.
+    # Persona: confused, polite, slightly hard-of-hearing elderly person.
     NEUTRAL_RESPONSES = [
-        "Hello? Yes, I'm here. What is this about exactly?",
-        "Sorry, I'm not sure what this is about. Can you explain properly?",
-        "I don't recognize this number. Who is calling and what do you need?",
-        "I'm not sure I understand. What exactly are you referring to?",
-        "Hmm, I didn't expect any call like this. Can you tell me more?",
-        "I didn't receive any message about this. But please, explain what happened?",
-        "Can you repeat that? The line was not very clear.",
-        "I'm a bit busy right now, but tell me quickly — is it something important?",
-        "Hello? Yes yes, I can hear you. Go on, what is this regarding?",
-        "Wait, who gave you this number? What is this about exactly?",
-        "One moment... I'm not following. Start from the beginning please.",
-        "Hmm okay, I'm listening. But who exactly are you and what do you need?",
-        "Hello? I didn't quite catch that. Please say that again slowly.",
-        "Sorry beta, I was doing something. Now tell me, what is the matter?",
-        "Yes? What is it? I don't understand what you are talking about.",
-        "Is this some company call? Tell me clearly what you want.",
+        "Hmm, I'm sorry I didn't quite follow. Can you say that again please?",
+        "Oh? I'm not sure I understood that properly. Could you explain again?",
+        "Sorry beta, my hearing is not so good. What were you saying?",
+        "I see... but I'm a little confused. Can you tell me more slowly?",
+        "Hmm, I didn't catch that properly. Please go on, I'm listening.",
+        "Oh okay. I'm trying to understand. Can you explain from the beginning?",
+        "Sorry, I was distracted for a moment. What did you say just now?",
+        "Yes yes, I'm here. But I didn't fully understand. Can you repeat?",
+        "Hmm one moment... my mind is slow today. What was that about?",
+        "I see. I'm not sure what you mean though. Can you tell me a bit more?",
+        "Oh! Okay okay. But help me understand — what exactly is happening?",
+        "Sorry, I'm a bit confused by all this. Please explain simply.",
+        "Hmm, that's interesting. But I'm not sure I follow. Go on?",
+        "Wait, I'm listening. Just say it again slowly for me please.",
+        "Okay okay, don't worry. Just tell me everything from the start.",
+        "Oh? Really? I didn't know about this. Please tell me more.",
     ]
     
     # ─── Greeting Responses ───────────────────────────────────────────────────
@@ -140,17 +142,18 @@ class HoneypotAgent:
     ]
     
     # Hindi neutral responses (for Hindi/Hinglish messages)
+    # Same confused, polite elderly persona in Hindi.
     HINDI_NEUTRAL_RESPONSES = [
-        "Haan ji? Bataiye, kya baat hai? Main sun raha hoon.",
-        "Aap kaun bol rahe ho? Thoda detail mein bataiye na.",
-        "Ji? Samajh nahi aaya. Dhire dhire bataiye please.",
-        "Kaun hai? Kahan se bol rahe ho? Kya chahiye aapko?",
-        "Hello ji? Haan bolo. Kya hai matter?",
-        "Ek minute, main samjha nahi. Phir se batao kya hua?",
-        "Ji bataiye, lekin pehle batao aap kaun hain? Kisi company se ho?",
-        "Haan ji, bol rahe hain? Main dhyan se sun raha hoon.",
-        "Arey, kya baat hai? Main kuch samjha nahi. Dhire bolo.",
-        "Hello? Haan haan, sun raha hoon. Aage bolo.",
+        "Haan ji? Samajh nahi aaya. Thoda dhire se bataiye na.",
+        "Arre? Kya baat hai? Main thoda confuse ho gaya. Phir se bolo na.",
+        "Ji? Main sun raha hoon lekin samajh nahi aa raha. Dhire bataiye.",
+        "Hello ji? Haan bolo bolo. Kya hua hai exactly?",
+        "Ek minute beta, main samjha nahi. Phir se batao kya baat hai?",
+        "Haan ji, bol rahe hain? Main dhyan se sun raha hoon, aage bolo.",
+        "Arey, kya baat hai? Main kuch samjha nahi. Dhire bolo na please.",
+        "Hello? Haan haan, sun raha hoon. Lekin samajh nahi aaya, phir se bolo.",
+        "Oh achha? Thoda aur detail mein batao na. Meri samajh mein nahi aaya.",
+        "Hmm ji, main yahan hoon. Lekin aapki baat samajh nahi aayi. Phir se bolo?",
     ]
     
     # Follow-up responses for short/vague messages like "Yes", "Ok", "Sure"
@@ -181,6 +184,52 @@ class HoneypotAgent:
         "Theek hai bhai, bolo bolo. Main sun raha hoon dhyan se.",
         "Ji haan, aap bolo. Main likh raha hoon sab.",
         "Achha ji, continue karo. Main samajhne ki koshish kar raha hoon.",
+    ]
+    
+    # ─── Rapport / Social Engineering Responses ──────────────────────────────
+    # Used when the scammer is building rapport with casual conversation:
+    # - "do you know me?", "we met in train", "remember me?"
+    # - "i'm your old friend", "we talked before", "i got your number from..."
+    # - Any non-scam conversational message that's NOT a greeting or short reply
+    #
+    # These messages are the Social Engineering phase where scammers try to
+    # establish trust before launching their scam pitch.
+    # Our persona: confused, doesn't recall, but stays polite and engaged.
+    RAPPORT_RESPONSES = [
+        "Hmm, I'm sorry but I really can't recall. Can you remind me where we met?",
+        "I meet so many people, my memory is not so good these days. Who are you exactly?",
+        "Sorry, I don't think I remember. Where did you say we met?",
+        "Are you sure you have the right person? I don't recall meeting you.",
+        "My memory is not great anymore beta. Can you tell me your name again?",
+        "Sorry, I'm confused. I talk to lot of people. Remind me please?",
+        "Hmm, I'm trying to remember but nothing is coming. Where was this?",
+        "Maybe you have the wrong number? I don't remember meeting anyone recently.",
+        "I see... but honestly I'm not sure I know you. Can you help me remember?",
+        "Really? I'm sorry, I meet many people daily. Your name is...?",
+        "Wait, which train? I travel sometimes but I don't recall. When was this?",
+        "I'm sorry friend, I genuinely don't remember. What is your good name?",
+        "You know me? But I don't think I know you. Can you tell me more?",
+        "Ah okay. But help me remember - what were we talking about when we met?",
+        "I don't want to be rude but I really can't place you. Where exactly?",
+        "My apologies, my mind is not working today. Please tell me your name again.",
+    ]
+    
+    HINDI_RAPPORT_RESPONSES = [
+        "Hmm, maaf kijiye lekin yaad nahi aa raha. Kahan mile the hum?",
+        "Main bahut logon se milta hoon, memory kamzor hai. Aap kaun hain exactly?",
+        "Sorry ji, yaad nahi aa raha. Kahan mile the aap bata sakte hain?",
+        "Aap sure hain aap sahi person se baat kar rahe hain? Mujhe yaad nahi hai.",
+        "Mere dimag mein nahi aa raha beta. Aapka naam kya tha?",
+        "Maafi chahta hoon, confuse ho raha hoon. Yaad dilao na please?",
+        "Hmm, yaad karne ki koshish kar raha hoon lekin nahi ho raha. Kahan tha ye?",
+        "Shayad galat number hai? Mujhe kisi se milna yaad nahi aa raha.",
+        "Achha... lekin sach bataun toh mujhe yaad nahi hai. Thoda aur batao?",
+        "Sach mein? Sorry ji, bahut logon se milna hota hai. Aapka naam kya hai?",
+        "Ruko, kaun si train? Kabhi kabhi travel karta hoon lekin yaad nahi. Kab hua?",
+        "Maaf kijiye dost, sachchi mein yaad nahi aa raha. Aapka shubh naam?",
+        "Aap mujhe jaante hain? Lekin main toh nahi jaanta. Thoda detail mein batao?",
+        "Achha ji. Lekin yaad dilao na - kya baat hui thi jab mile the?",
+        "Badtameezi na samjhna lekin sach mein yaad nahi aa raha. Kahan exactly?",
     ]
     
     # First contact - we're confused, who is this?
@@ -824,6 +873,153 @@ class HoneypotAgent:
         }
         return clean in short_words or len(clean.split()) <= 2
     
+    # ─── SMS Text Normalization Map ────────────────────────────────────────────
+    # Scammers (and normal people) use tons of informal abbreviations.
+    # Without normalizing these, our phrase matching breaks on "met u",
+    # "ur uncle", "hw r u", etc.
+    # We expand these BEFORE checking against any phrase list.
+    _SMS_NORMALIZE_MAP = {
+        r'\bu\b': 'you',
+        r'\bur\b': 'your',
+        r'\br\b': 'are',
+        r'\bhw\b': 'how',
+        r'\bm\b': 'am',
+        r'\bv\b': 'we',
+        r'\bda\b': 'the',
+        r'\bdat\b': 'that',
+        r'\bdis\b': 'this',
+        r'\bpls\b': 'please',
+        r'\bplz\b': 'please',
+        r'\bplzz\b': 'please',
+        r'\bmsg\b': 'message',
+        r'\bmsgs\b': 'messages',
+        r'\bthx\b': 'thanks',
+        r'\btnx\b': 'thanks',
+        r'\bthnx\b': 'thanks',
+        r'\bsry\b': 'sorry',
+        r'\bfrnd\b': 'friend',
+        r'\bfrm\b': 'from',
+        r'\bwid\b': 'with',
+        r'\bwer\b': 'were',
+        r'\bwhr\b': 'where',
+        r'\bwat\b': 'what',
+        r'\bwt\b': 'what',
+        r'\bhv\b': 'have',
+        r'\biv\b': 'i have',
+        r'\bdn\b': "don't",
+        r'\bdnt\b': "don't",
+        r'\bdonno\b': "don't know",
+        r'\bdunno\b': "don't know",
+        r'\bcuz\b': 'because',
+        r'\bbcoz\b': 'because',
+        r'\bsmwhr\b': 'somewhere',
+        r'\bsmwhere\b': 'somewhere',
+        r'\bsmwher\b': 'somewhere',
+        r'\bsm1\b': 'someone',
+        r'\bsum1\b': 'someone',
+        r'\bne1\b': 'anyone',
+        r'\bany1\b': 'anyone',
+        r'\bevry1\b': 'everyone',
+        r'\b2day\b': 'today',
+        r'\b2moro\b': 'tomorrow',
+        r'\b2morrow\b': 'tomorrow',
+        r'\b2nite\b': 'tonight',
+        r'\byr\b': 'your',
+        r'\byrs\b': 'yours',
+        r'\bwanna\b': 'want to',
+        r'\bgonna\b': 'going to',
+        r'\bgotta\b': 'got to',
+        r'\bkno\b': 'know',
+        r'\bknw\b': 'know',
+        r'\bremmbr\b': 'remember',
+        r'\brmbr\b': 'remember',
+        r'\brmmbr\b': 'remember',
+        r'\buncl\b': 'uncle',
+        r'\baunti\b': 'aunty',
+    }
+
+    @classmethod
+    def _normalize_sms_text(cls, text: str) -> str:
+        """Normalize SMS/chat abbreviations to standard English.
+        
+        Converts informal spellings like 'u', 'ur', 'r', 'hw' to their
+        full forms so that phrase matching works reliably.
+        
+        Examples:
+            'i have met u somewhere' → 'i have met you somewhere'
+            'i am ur uncle'          → 'i am your uncle'
+            'hw r u'                 → 'how are you'
+            'u dnt know me'          → 'you don't know me'
+        """
+        result = text.lower().strip()
+        for pattern, replacement in cls._SMS_NORMALIZE_MAP.items():
+            result = re.sub(pattern, replacement, result)
+        return result
+
+    def _is_rapport_message(self, text: str) -> bool:
+        """Detect social engineering / rapport-building messages.
+        
+        These are conversational messages where the scammer tries to 
+        establish familiarity before launching their actual scam pitch.
+        Uses SMS normalization so 'met u' matches 'met you', etc.
+        
+        Examples:
+            - "do you know me?"           → True
+            - "we met in train"           → True
+            - "i'm your old friend"       → True
+            - "i have met u somewhere"    → True  (normalized: 'met you')
+            - "i am ur uncle"             → True  (normalized: 'your uncle'  → 'i am your')
+            - "your account is suspended" → False (scam, not rapport)
+        """
+        msg = text.strip().lower()
+        normalized = self._normalize_sms_text(msg)
+        
+        # Rapport-building phrases (scammer trying to establish familiarity)
+        rapport_phrases = [
+            # Identity / recognition
+            "know me", "remember me", "recognize me", "recall me",
+            "don't know me", "don't recognize", "you don't know",
+            "forgotten me", "forgot me", "you forgot",
+            # Meeting / encounter
+            "we met", "we talked", "we spoke", "we chatted",
+            "met you", "met in", "met at", "met before", "met somewhere",
+            "have met", "seen you", "saw you",
+            # Relationship claims
+            "your friend", "old friend", "your classmate", "your colleague",
+            "your uncle", "your aunty", "your aunt", "your brother",
+            "your sister", "your neighbor", "your neighbour",
+            "i am your", "i'm your",
+            "your relative", "your cousin", "your bhai",
+            # Context claims
+            "from school", "from college", "from office", "from work",
+            "from train", "from bus", "from market", "from temple",
+            "from hospital", "from wedding", "from party",
+            "in train", "in bus", "in market",
+            # Number source
+            "got your number", "got this number", "someone gave",
+            "found your number", "your number from",
+            # Recognition prompts
+            "do you remember", "can you recall", "you forgot me",
+            "it's me", "this is me", "guess who", "long time",
+            # Personal / emotional
+            "how are you", "missed you", "miss you", "was thinking about",
+            "wanted to talk", "calling to check", "just checking",
+            # Hindi
+            "jaante ho", "pehchante ho", "yaad hai", "bhool gaye",
+            "purana dost", "school wala", "college wala", "train mein",
+            "mujhe nahi jaante", "pehchana nahi", "humne baat ki thi",
+            "mile the", "mila tha", "kahan mile", "hum mile the",
+            "kaise ho", "kya haal", "tumhara uncle", "tumhara bhai",
+            "tumhara dost", "tumhari friend", "apna dost",
+            "yaad karo", "yaad nahi", "bhul gaye kya",
+        ]
+        
+        # Check against both raw message AND normalized version
+        # This catches "met u" (normalized → "met you") as well as
+        # direct Hindi phrases that don't need normalization
+        return (any(phrase in msg for phrase in rapport_phrases) or
+                any(phrase in normalized for phrase in rapport_phrases))
+    
     def _detect_scam_type(self, tactics: list) -> str:
         """Determine the type of scam based on detected tactics."""
         if "digital_arrest" in tactics:
@@ -897,6 +1093,12 @@ class HoneypotAgent:
         if is_greeting_message(scammer_message):
             context["greeting_stage"] = True
             pool = self.HINDI_GREETING_RESPONSES if lang == "hi" else self.GREETING_RESPONSES
+        
+        # 0.5. RAPPORT / SOCIAL ENGINEERING - scammer trying to build familiarity
+        # ("u don't know me?", "we met in train", "i'm your old friend")
+        # Respond as confused person who doesn't recall, stay polite and engaged
+        elif self._is_rapport_message(scammer_message):
+            pool = self.HINDI_RAPPORT_RESPONSES if lang == "hi" else self.RAPPORT_RESPONSES
         
         # 1. SHORT MESSAGES - follow-up to continue conversation
         elif self._is_short_message(scammer_message) and message_count > 1:
@@ -1245,8 +1447,9 @@ class HoneypotAgent:
         
         Response Priority:
         1. Greeting messages → warm, polite greeting replies
-        2. Short/vague messages → follow-up questions
-        3. Other messages → neutral, cautious responses
+        2. Rapport/social engineering → confused but polite "I don't recall" responses
+        3. Short/vague messages → follow-up questions
+        4. Other messages → neutral, cautious responses
         
         The greeting_stage flag is set here when a greeting is detected,
         allowing the system to show "Rapport Initialization" stage.
@@ -1267,10 +1470,14 @@ class HoneypotAgent:
         if scammer_message and is_greeting_message(scammer_message):
             context["greeting_stage"] = True  # Set flag for stage tracking
             pool = self.HINDI_GREETING_RESPONSES if lang == "hi" else self.GREETING_RESPONSES
-        # PRIORITY 2: Check if this is a short/vague message - respond with follow-up
+        # PRIORITY 2: Rapport / social engineering - scammer building familiarity
+        # ("u don't know me?", "we met in train", "guess who")
+        elif scammer_message and self._is_rapport_message(scammer_message):
+            pool = self.HINDI_RAPPORT_RESPONSES if lang == "hi" else self.RAPPORT_RESPONSES
+        # PRIORITY 3: Check if this is a short/vague message - respond with follow-up
         elif scammer_message and self._is_short_message(scammer_message):
             pool = self.HINDI_SHORT_FOLLOWUP_RESPONSES if lang == "hi" else self.SHORT_FOLLOWUP_RESPONSES
-        # PRIORITY 3: Default neutral response for other messages
+        # PRIORITY 4: Default neutral response for other messages
         else:
             pool = self.HINDI_NEUTRAL_RESPONSES if lang == "hi" else self.NEUTRAL_RESPONSES
         

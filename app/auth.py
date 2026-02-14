@@ -15,7 +15,7 @@ API_KEY_NAME = "x-api-key"
 api_key_header = APIKeyHeader(name=API_KEY_NAME, auto_error=False)
 
 # Get the valid API key from environment (or use a default for testing)
-VALID_API_KEY = os.getenv("API_KEY", "default-hackathon-key-2026")
+VALID_API_KEY = os.getenv("API_KEY", "default-api-key-2026")
 
 
 async def verify_api_key(api_key: str = Security(api_key_header)):

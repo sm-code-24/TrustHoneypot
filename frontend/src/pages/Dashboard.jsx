@@ -180,7 +180,7 @@ export default function Dashboard() {
             <span
               className="text-[11px] font-mono"
               style={{ color: "var(--text-muted)" }}>
-              AI Impact Buildathon — PS-2
+              Scam Intelligence Platform
             </span>
           </div>
         </header>
@@ -213,7 +213,7 @@ export default function Dashboard() {
               className="font-medium hover:underline">
               200 Hustlers
             </Link>
-            {" — "}TrustHoneypot v2.1 — Made for AI Impact Buildathon PS-2
+            {" — "}TrustHoneypot v2.1 — Scam Intelligence Platform
           </p>
         </footer>
       </div>
