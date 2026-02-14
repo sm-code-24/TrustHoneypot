@@ -38,7 +38,7 @@ from extractor import extractor
 from agent import agent
 from memory import memory
 from callback import send_final_callback, should_send_callback
-from llm import llm_service
+from llm import llm_service, is_greeting_message
 from db import db_service
 from simulator import simulator
 from intelligence import (
@@ -231,14 +231,27 @@ async def process_message(
         agent_reply = agent.get_reply(session_id, current_message, msg_count, scam_confirmed)
         reply_source = "rule_based"
         
-        # If LLM mode requested, try LLM rephrasing (works for ALL replies, not just confirmed scams)
+        # If LLM mode requested, try LLM generation/rephrasing
         if response_mode == "llm":
             logger.info(f"[{session_id[:8]}] [LLM] Mode requested. enabled={llm_service.enabled}, api_key_set={bool(llm_service.api_key)}, model={llm_service.model_name}")
             if not llm_service.enabled:
                 llm_status = llm_service.get_status()
                 logger.warning(f"[{session_id[:8]}] [LLM] NOT ENABLED — status: {json.dumps(llm_status)}")
                 reply_source = "rule_based_fallback"
+            elif is_greeting_message(current_message):
+                # Greeting-stage: use dedicated greeting LLM prompt
+                logger.info(f"[{session_id[:8]}] [LLM] Greeting detected, using GREETING_LLM_PROMPT")
+                try:
+                    llm_reply, llm_source = await llm_service.generate_greeting_reply(
+                        scammer_message=current_message
+                    )
+                    agent_reply = llm_reply
+                    reply_source = llm_source
+                except Exception as llm_err:
+                    logger.warning(f"[{session_id[:8]}] [LLM] Greeting generation failed: {llm_err}, using rule-based")
+                    reply_source = "rule_based_fallback"
             else:
+                # Normal scam engagement: rephrase rule-based reply via LLM
                 strategy = agent.get_current_strategy(session_id)
                 try:
                     llm_reply, llm_source = await llm_service.rephrase_reply(
@@ -499,19 +512,31 @@ async def run_simulation(
         agent_reply = agent.get_reply(session_id, message_text, msg_count, scam_confirmed)
         reply_source = "rule_based"
         
-        # LLM rephrasing if requested
+        # LLM generation/rephrasing if requested
         if response_mode == "llm":
-            strategy = agent.get_current_strategy(session_id)
-            try:
-                llm_reply, llm_source = await llm_service.rephrase_reply(
-                    strategy=strategy,
-                    rule_reply=agent_reply,
-                    scammer_message=message_text
-                )
-                agent_reply = llm_reply
-                reply_source = llm_source
-            except Exception:
-                reply_source = "rule_based_fallback"
+            if is_greeting_message(message_text):
+                # Greeting-stage: use dedicated greeting LLM prompt
+                try:
+                    llm_reply, llm_source = await llm_service.generate_greeting_reply(
+                        scammer_message=message_text
+                    )
+                    agent_reply = llm_reply
+                    reply_source = llm_source
+                except Exception:
+                    reply_source = "rule_based_fallback"
+            else:
+                # Normal scam engagement: rephrase rule-based reply via LLM
+                strategy = agent.get_current_strategy(session_id)
+                try:
+                    llm_reply, llm_source = await llm_service.rephrase_reply(
+                        strategy=strategy,
+                        rule_reply=agent_reply,
+                        scammer_message=message_text
+                    )
+                    agent_reply = llm_reply
+                    reply_source = llm_source
+                except Exception:
+                    reply_source = "rule_based_fallback"
         
         memory.set_agent_response(session_id, agent_reply)
         memory.add_message(session_id, "agent", agent_reply)

@@ -39,6 +39,108 @@ except ImportError:
 
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
+# ─── Greeting Detection ───────────────────────────────────────────────────────
+
+_GREETING_PHRASES = [
+    "hi", "hello", "hey", "hii", "hiii", "helo", "helo",
+    "good morning", "good afternoon", "good evening", "good night",
+    "gm", "gn", "morning", "evening",
+    "namaste", "namaskar", "namaskaaram",
+    "hello sir", "hello madam", "hello ji", "hi sir", "hi ji",
+    "hey there", "hey sir", "hey ji",
+    "haan ji", "ji", "haanji",
+    "howdy", "greetings", "sup", "yo",
+]
+
+_SCAM_KEYWORDS = [
+    "account", "bank", "verify", "kyc", "suspend", "block", "urgent",
+    "payment", "pay", "upi", "otp", "pin", "password", "refund",
+    "prize", "lottery", "won", "winner", "reward", "cashback",
+    "police", "arrest", "court", "case", "warrant", "cbi", "fir",
+    "parcel", "courier", "drugs", "customs",
+    "transfer", "send money", "bhejo", "paisa",
+    "aadhaar", "pan card", "sim", "deactivate",
+    "video call", "digital arrest", "stay on call",
+    "investment", "trading", "profit", "guaranteed returns",
+    "job", "work from home", "registration fee",
+]
+
+
+def is_greeting_message(text: str) -> bool:
+    """Detect if message is a simple greeting with no scam indicators.
+
+    Conditions:
+    - Message contains a greeting phrase
+    - Message length <= 4 words
+    - No scam-related keywords present
+    - No urgency/payment/verification indicators
+    """
+    cleaned = text.strip().lower().rstrip(".,!?;:'\"")
+    words = cleaned.split()
+
+    if len(words) > 4:
+        return False
+
+    # Check for scam keywords — reject immediately
+    for kw in _SCAM_KEYWORDS:
+        if kw in cleaned:
+            return False
+
+    # Check if the message matches or contains a greeting phrase
+    for phrase in _GREETING_PHRASES:
+        if cleaned == phrase or cleaned.startswith(phrase + " ") or cleaned.endswith(" " + phrase):
+            return True
+        # Also match if the whole message is just the greeting (possibly with punctuation)
+        if phrase in cleaned and len(words) <= 3:
+            return True
+
+    return False
+
+
+# ─── Greeting-Stage LLM Prompt ────────────────────────────────────────────────
+
+GREETING_LLM_PROMPT = """You are a cautious but polite person who has just received a greeting message from an unknown sender. Respond naturally and politely. Do not escalate. Do not mention scams. Keep it short and human-like. Slightly cautious but friendly.
+
+STRICT RULES:
+1. Respond in 1-2 sentences MAXIMUM
+2. Do NOT be defensive or suspicious
+3. Do NOT mention scams, fraud, or anything negative
+4. Do NOT ask verification questions
+5. Sound like a normal, slightly cautious Indian person
+6. Be warm but not overly enthusiastic
+7. If the greeting is in Hindi/Hinglish, respond in casual Hinglish (Roman script)
+8. If the greeting is in English, respond in simple English
+
+Examples of GOOD responses:
+- "Hello! Yes, who is this?"
+- "Hi ji, haan bolo?"
+- "Good morning! Kaun bol raha hai?"
+- "Hello, yes I'm here. Who is this?"
+- "Namaste ji, bataiye?"
+
+Examples of BAD responses (NEVER do this):
+- "What do you want? I don't trust unknown callers."
+- "Is this a scam? Who are you?"
+- "I'm not sure what this is about. Can you explain from the beginning?"
+
+OUTPUT FORMAT:
+- Return ONLY the response text, nothing else
+- Do NOT include any prefix like "Here is...", "Sure...", etc.
+- Do NOT include quotation marks around the reply
+- Do NOT add explanations, notes, or commentary"""
+
+# Greeting fallback responses (used when LLM times out during greeting stage)
+GREETING_FALLBACK_RESPONSES = [
+    "Hello! Ji, kaun bol raha hai?",
+    "Hi! Yes, who is this?",
+    "Hello ji, haan bataiye?",
+    "Hi, yes I'm here. Who is this?",
+    "Namaste! Ji bolo?",
+    "Hello! Haan ji, bolo bolo.",
+    "Hi ji! Kahiye, kaun hai?",
+    "Good day! Yes, who is calling?",
+]
+
 # Strict system prompt
 SYSTEM_PROMPT = """You are rephrasing a scam honeypot agent's reply to sound more natural and human-like.
 The agent is pretending to be a vulnerable Indian citizen (typically elderly) to keep a scammer engaged.
@@ -131,6 +233,66 @@ class LLMService:
             logger.error(f"🤖 LLM service FAILED to configure: {e}", exc_info=True)
             self.enabled = False
 
+    async def generate_greeting_reply(
+        self,
+        scammer_message: str
+    ) -> Tuple[str, str]:
+        """
+        Generate a natural greeting response using the dedicated GREETING_LLM_PROMPT.
+
+        Returns:
+            (final_reply, source) where source is "llm" | "rule_based" | "rule_based_fallback"
+        """
+        import random as _random
+
+        if not self.enabled:
+            logger.warning("🤖 LLM SKIP (greeting): service not enabled")
+            return _random.choice(GREETING_FALLBACK_RESPONSES), "rule_based"
+
+        # Circuit breaker check
+        now = time.time()
+        if now < self._backoff_until:
+            logger.debug("LLM circuit breaker active during greeting, using fallback")
+            return _random.choice(GREETING_FALLBACK_RESPONSES), "rule_based_fallback"
+
+        self._total_calls += 1
+        start_time = time.time()
+
+        try:
+            prompt = f"Greeting received: {scammer_message}\n\nRespond naturally:"
+
+            llm_reply = await asyncio.wait_for(
+                self._generate_with_prompt(GREETING_LLM_PROMPT, prompt),
+                timeout=self.timeout_ms / 1000.0
+            )
+
+            elapsed_ms = (time.time() - start_time) * 1000
+
+            if llm_reply and self._is_safe(llm_reply):
+                self._consecutive_failures = 0
+                self._total_successes += 1
+                self._avg_latency_ms = (
+                    (self._avg_latency_ms * (self._total_successes - 1) + elapsed_ms)
+                    / self._total_successes
+                )
+                logger.info(f"LLM greeting reply generated in {elapsed_ms:.0f}ms")
+                return llm_reply.strip(), "llm"
+            else:
+                self._record_failure("unsafe_or_empty_greeting")
+                logger.warning(f"LLM greeting reply unsafe or empty, falling back. elapsed={elapsed_ms:.0f}ms")
+                return _random.choice(GREETING_FALLBACK_RESPONSES), "rule_based_fallback"
+
+        except asyncio.TimeoutError:
+            elapsed_ms = (time.time() - start_time) * 1000
+            self._record_failure("timeout_greeting")
+            logger.warning(f"LLM greeting timeout after {elapsed_ms:.0f}ms, falling back to greeting fallback")
+            return _random.choice(GREETING_FALLBACK_RESPONSES), "rule_based_fallback"
+        except Exception as e:
+            elapsed_ms = (time.time() - start_time) * 1000
+            self._record_failure("error_greeting")
+            logger.error(f"LLM greeting error after {elapsed_ms:.0f}ms: {e}")
+            return _random.choice(GREETING_FALLBACK_RESPONSES), "rule_based_fallback"
+
     async def rephrase_reply(
         self,
         strategy: str,
@@ -209,6 +371,24 @@ class LLMService:
                 f"(reason: {reason}), backing off for {backoff_seconds}s"
             )
 
+    async def _generate_with_prompt(self, system_prompt: str, prompt: str) -> Optional[str]:
+        """Call Groq API with a custom system prompt."""
+        if not self._client:
+            return None
+
+        payload = {
+            "model": self.model_name,
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": prompt},
+            ],
+            "max_tokens": 80,
+            "temperature": 0.7,
+            "top_p": 0.9,
+        }
+
+        return await self._call_groq(payload)
+
     async def _generate(self, prompt: str) -> Optional[str]:
         """Call Groq API (OpenAI-compatible) with async httpx."""
         if not self._client:
@@ -224,6 +404,13 @@ class LLMService:
             "temperature": 0.7,
             "top_p": 0.9,
         }
+
+        return await self._call_groq(payload)
+
+    async def _call_groq(self, payload: dict) -> Optional[str]:
+        """Execute Groq API call with error handling."""
+        if not self._client:
+            return None
 
         try:
             response = await self._client.post(GROQ_API_URL, json=payload)
