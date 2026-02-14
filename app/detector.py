@@ -378,31 +378,40 @@ class ScamDetector:
     
     def _calculate_confidence(self, score: int, categories_hit: int, 
                               pattern_matches: int) -> float:
-        """Calculate confidence level (0.0 to 1.0)."""
+        """
+        Calculate confidence level (0.0 to 1.0).
+        
+        Uses a logarithmic curve so confidence grows meaningfully with evidence
+        but doesn't immediately pin at 0.99 after a few messages.
+        """
+        import math
+        
         if score < self.SCAM_THRESHOLD:
-            return min(score / self.SCAM_THRESHOLD * 0.5, 0.5)
+            # Below scam threshold: linear ramp from 0 to 0.5
+            return round(min(score / self.SCAM_THRESHOLD * 0.5, 0.49), 2)
         
-        # Base confidence from score
-        if score >= self.CRITICAL_THRESHOLD:
-            base = 0.95
-        elif score >= self.HIGH_CONFIDENCE_THRESHOLD:
-            base = 0.85
-        else:
-            base = 0.7
+        # Above scam threshold: use a log curve that grows gradually
+        # Map score from [SCAM_THRESHOLD .. 500+] to [0.55 .. 0.97]
+        # log curve: 0.55 + 0.42 * log(1 + excess) / log(1 + max_excess)
+        excess = score - self.SCAM_THRESHOLD
+        max_excess = 500  # score of ~530 would give ~0.97
+        log_factor = math.log(1 + excess) / math.log(1 + max_excess)
+        base = 0.55 + 0.35 * min(log_factor, 1.0)
         
-        # Boost for multiple categories
-        category_boost = min(categories_hit * 0.03, 0.15)
+        # Boost for multiple categories (smaller increments)
+        category_boost = min(categories_hit * 0.015, 0.06)
         
-        # Boost for pattern matches
-        pattern_boost = min(pattern_matches * 0.05, 0.1)
+        # Boost for pattern matches (smaller increments)
+        pattern_boost = min(pattern_matches * 0.02, 0.05)
         
-        return min(base + category_boost + pattern_boost, 0.99)
+        confidence = base + category_boost + pattern_boost
+        return round(min(confidence, 0.97), 2)
     
     def _get_risk_level(self, score: int, confidence: float) -> str:
         """Determine risk level based on score and confidence."""
-        if score >= self.CRITICAL_THRESHOLD or confidence >= 0.9:
+        if score >= self.CRITICAL_THRESHOLD or confidence >= 0.85:
             return "critical"
-        elif score >= self.HIGH_CONFIDENCE_THRESHOLD or confidence >= 0.75:
+        elif score >= self.HIGH_CONFIDENCE_THRESHOLD or confidence >= 0.7:
             return "high"
         elif score >= self.SCAM_THRESHOLD:
             return "medium"

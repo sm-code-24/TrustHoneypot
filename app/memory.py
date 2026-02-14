@@ -6,7 +6,7 @@ from typing import List, Dict, Optional
 
 # Stale sessions older than this are eligible for cleanup
 SESSION_TTL_HOURS = 24
-MAX_SESSIONS = 10000
+MAX_SESSIONS = 1000
 
 
 class SessionMemory:

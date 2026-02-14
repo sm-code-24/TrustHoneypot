@@ -191,7 +191,7 @@ export default function Landing() {
             color: "var(--gradient-text-1)",
           }}>
           <Sparkles size={12} className="animate-pulse" />
-          India AI Impact Buildathon 2025
+          India AI Impact Buildathon 2026
         </div>
 
         {/* Animated cycling word */}
@@ -366,12 +366,12 @@ export default function Landing() {
         <p className="text-xs" style={{ color: "var(--text-muted)" }}>
           &copy; {year}{" "}
           <Link
-            to="/about"
+            to="/dashboard/about"
             className="font-medium hover:underline"
             style={{ color: "var(--text-tertiary)" }}>
             200 Hustlers
           </Link>
-          {" — "}TrustHoneypot — Made for AI Impact Buildathon PS-2
+          {" — "}TrustHoneypot v2.1 — Made for AI Impact Buildathon PS-2
         </p>
       </footer>
     </div>

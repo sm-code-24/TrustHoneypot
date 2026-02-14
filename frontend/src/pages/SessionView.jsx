@@ -394,11 +394,6 @@ export default function SessionView() {
             ts: Date.now(),
           },
         ]);
-        // Also log to console for debugging
-        // eslint-disable-next-line no-console
-        console.warn(
-          "[LLM] Fallback to rule-based: LLM unavailable or failed.",
-        );
       }
 
       const agentMsg = {
@@ -420,8 +415,6 @@ export default function SessionView() {
           ts: Date.now(),
         },
       ]);
-      // eslint-disable-next-line no-console
-      console.error("[LLM] API error:", err);
     } finally {
       setLoading(false);
     }
@@ -696,7 +689,7 @@ export default function SessionView() {
                 />
               </div>
 
-              {/* Detection */}
+              {/* Detection + Fraud Type */}
               <div className="glass rounded-xl p-3 space-y-2">
                 <div className="flex items-center gap-2">
                   {analysis.scam_detected ?
@@ -708,6 +701,25 @@ export default function SessionView() {
                     {analysis.scam_detected ? "Scam Detected" : "Monitoring"}
                   </span>
                 </div>
+                {/* Fraud Type Badge */}
+                {analysis.fraud_type && (
+                  <div>
+                    <span
+                      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
+                        analysis.fraud_color === "red" ?
+                          "text-red-400 bg-red-500/10 border-red-500/20"
+                        : analysis.fraud_color === "amber" ?
+                          "text-amber-400 bg-amber-500/10 border-amber-500/20"
+                        : analysis.fraud_color === "purple" ?
+                          "text-purple-400 bg-purple-500/10 border-purple-500/20"
+                        : analysis.fraud_color === "blue" ?
+                          "text-blue-400 bg-blue-500/10 border-blue-500/20"
+                        : "text-slate-400 bg-slate-500/10 border-slate-500/20"
+                      }`}>
+                      {analysis.fraud_type}
+                    </span>
+                  </div>
+                )}
                 {analysis.scam_type && analysis.scam_type !== "unknown" && (
                   <div
                     className="text-xs"
@@ -738,6 +750,54 @@ export default function SessionView() {
                     </span>
                   </div>
                 )}
+                {/* Detection Reasoning */}
+                {analysis.detection_reasons &&
+                  analysis.detection_reasons.length > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <span
+                        className="text-[10px] font-semibold"
+                        style={{ color: "var(--text-heading)" }}>
+                        Detection Reasoning
+                      </span>
+                      <ul className="space-y-0.5">
+                        {analysis.detection_reasons.map((reason, idx) => (
+                          <li
+                            key={idx}
+                            className="flex items-start gap-1.5 text-[10px]"
+                            style={{ color: "var(--text-tertiary)" }}>
+                            <span className="text-blue-400 mt-0.5">▸</span>
+                            <span>{reason}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  )}
+                {/* Pattern Similarity */}
+                {analysis.pattern_similarity != null &&
+                  analysis.pattern_similarity > 0 && (
+                    <div className="mt-2 space-y-1">
+                      <div className="flex items-center justify-between">
+                        <span
+                          className="text-[10px] font-semibold"
+                          style={{ color: "var(--text-heading)" }}>
+                          Pattern Similarity
+                        </span>
+                        <span className="text-[10px] font-mono text-purple-400">
+                          {(analysis.pattern_similarity * 100).toFixed(0)}%
+                        </span>
+                      </div>
+                      <div
+                        className="h-1 rounded-full overflow-hidden"
+                        style={{ background: "var(--bar-track)" }}>
+                        <div
+                          className="h-full rounded-full bg-gradient-to-r from-purple-500 to-pink-500 transition-all duration-700"
+                          style={{
+                            width: `${(analysis.pattern_similarity * 100).toFixed(0)}%`,
+                          }}
+                        />
+                      </div>
+                    </div>
+                  )}
               </div>
 
               {/* Intelligence */}

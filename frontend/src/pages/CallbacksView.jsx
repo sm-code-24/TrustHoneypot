@@ -8,11 +8,62 @@ import {
   Clock,
   ChevronDown,
   ChevronUp,
+  Hash,
+  Phone,
+  CreditCard,
+  Link2,
+  Mail,
 } from "lucide-react";
 
-function JsonPreview({ data }) {
+const FRAUD_COLORS = {
+  "PAYMENT FRAUD": "text-red-400 bg-red-500/10 border-red-500/20",
+  "KYC PHISHING": "text-amber-400 bg-amber-500/10 border-amber-500/20",
+  "LOTTERY SCAM": "text-purple-400 bg-purple-500/10 border-purple-500/20",
+  IMPERSONATION: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+  "GENERIC SCAM": "text-slate-400 bg-slate-500/10 border-slate-500/20",
+};
+
+function FraudBadge({ label }) {
+  const cls = FRAUD_COLORS[label] || FRAUD_COLORS["GENERIC SCAM"];
+  return (
+    <span
+      className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${cls}`}>
+      {label}
+    </span>
+  );
+}
+
+function IntelBadge({ icon: Icon, label, items, color }) {
+  if (!items || items.length === 0) return null;
+  const colorMap = {
+    blue: "text-blue-400 bg-blue-500/10 border-blue-500/20",
+    purple: "text-purple-400 bg-purple-500/10 border-purple-500/20",
+    emerald: "text-emerald-400 bg-emerald-500/10 border-emerald-500/20",
+    amber: "text-amber-400 bg-amber-500/10 border-amber-500/20",
+    red: "text-red-400 bg-red-500/10 border-red-500/20",
+  };
+  return (
+    <div
+      className={`inline-flex items-center gap-1.5 px-2 py-1 rounded-md border text-[10px] font-medium ${colorMap[color] || colorMap.blue}`}>
+      <Icon size={11} />
+      <span>
+        {label}: {items.length}
+      </span>
+    </div>
+  );
+}
+
+function PayloadDrawer({ data, intelligence }) {
   const [open, setOpen] = useState(false);
-  if (!data) return <span style={{ color: "var(--text-muted)" }}>—</span>;
+  if (!data && !intelligence)
+    return <span style={{ color: "var(--text-muted)" }}>—</span>;
+  const intelEntries = [
+    { key: "upiIds", icon: Hash, label: "UPI", color: "purple" },
+    { key: "phoneNumbers", icon: Phone, label: "Phone", color: "blue" },
+    { key: "bankAccounts", icon: CreditCard, label: "Bank", color: "emerald" },
+    { key: "phishingLinks", icon: Link2, label: "Links", color: "red" },
+    { key: "emails", icon: Mail, label: "Email", color: "amber" },
+  ];
   return (
     <div>
       <button
@@ -24,15 +75,70 @@ function JsonPreview({ data }) {
         {open ? "Hide" : "View"} payload
       </button>
       {open && (
-        <pre
-          className="mt-2 text-[10px] font-mono rounded-lg p-3 overflow-x-auto max-h-40 whitespace-pre-wrap leading-relaxed border"
+        <div
+          className="mt-2 rounded-lg p-3 border space-y-3"
           style={{
-            color: "var(--text-secondary)",
             background: "var(--bg-tertiary)",
             borderColor: "var(--border-primary)",
           }}>
-          {JSON.stringify(data, null, 2)}
-        </pre>
+          {intelligence && (
+            <div className="space-y-1.5">
+              <span
+                className="text-[10px] font-semibold"
+                style={{ color: "var(--text-heading)" }}>
+                Intel Gathered
+              </span>
+              <div className="flex flex-wrap gap-1.5">
+                {intelEntries.map(({ key, icon, label, color }) => (
+                  <IntelBadge
+                    key={key}
+                    icon={icon}
+                    label={label}
+                    items={intelligence[key]}
+                    color={color}
+                  />
+                ))}
+              </div>
+              <div className="space-y-0.5 mt-1">
+                {intelEntries.map(({ key, label }) => {
+                  const items = intelligence[key] || [];
+                  if (items.length === 0) return null;
+                  return (
+                    <div
+                      key={key}
+                      className="text-[10px]"
+                      style={{ color: "var(--text-tertiary)" }}>
+                      <span
+                        className="font-medium"
+                        style={{ color: "var(--text-secondary)" }}>
+                        {label}:
+                      </span>{" "}
+                      {items.join(", ")}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
+          {data && (
+            <div>
+              <span
+                className="text-[10px] font-semibold"
+                style={{ color: "var(--text-heading)" }}>
+                Raw Payload
+              </span>
+              <pre
+                className="mt-1 text-[10px] font-mono rounded-lg p-2 overflow-x-auto max-h-32 whitespace-pre-wrap leading-relaxed border"
+                style={{
+                  color: "var(--text-secondary)",
+                  background: "var(--bg-primary)",
+                  borderColor: "var(--border-primary)",
+                }}>
+                {JSON.stringify(data, null, 2)}
+              </pre>
+            </div>
+          )}
+        </div>
       )}
     </div>
   );
@@ -70,8 +176,6 @@ export default function CallbacksView() {
           Callback Reports
         </h2>
       </div>
-
-      {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
         <div
           className="glass rounded-xl p-4 text-center card-hover border"
@@ -104,8 +208,6 @@ export default function CallbacksView() {
           </div>
         </div>
       </div>
-
-      {/* Callback table */}
       <div className="glass rounded-xl overflow-hidden">
         <div
           className="px-5 py-3 border-b"
@@ -127,6 +229,9 @@ export default function CallbacksView() {
                 }}>
                 <th className="text-left px-5 py-2.5 font-medium">Session</th>
                 <th className="text-center px-5 py-2.5 font-medium">Status</th>
+                <th className="text-left px-5 py-2.5 font-medium">
+                  Fraud Type
+                </th>
                 <th className="text-left px-5 py-2.5 font-medium hidden sm:table-cell">
                   Time
                 </th>
@@ -137,7 +242,7 @@ export default function CallbacksView() {
               {callbacks.length === 0 && (
                 <tr>
                   <td
-                    colSpan={4}
+                    colSpan={5}
                     className="px-5 py-8 text-center text-sm"
                     style={{ color: "var(--text-muted)" }}>
                     No callbacks sent yet. Engage a scammer to trigger
@@ -175,6 +280,9 @@ export default function CallbacksView() {
                         }
                       />
                     </td>
+                    <td className="px-5 py-2.5">
+                      <FraudBadge label={cb.fraud_type || "GENERIC SCAM"} />
+                    </td>
                     <td
                       className="px-5 py-2.5 text-xs hidden sm:table-cell"
                       style={{ color: "var(--text-tertiary)" }}>
@@ -187,7 +295,10 @@ export default function CallbacksView() {
                       : "—"}
                     </td>
                     <td className="px-5 py-2.5">
-                      <JsonPreview data={cb.payload_summary} />
+                      <PayloadDrawer
+                        data={cb.payload_summary}
+                        intelligence={cb.intelligence}
+                      />
                     </td>
                   </tr>
                 );

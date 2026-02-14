@@ -1,6 +1,6 @@
-# TrustHoneypot — Scam Intelligence Command Center
+# TrustHoneypot v2.1 — Scam Intelligence Command Center
 
-> **India AI Impact Buildathon 2025 — Problem Statement 2**  
+> **India AI Impact Buildathon 2026— Problem Statement 2**  
 > Team: **200 Hustlers** (Shailav · Bhupendra · Shivam · Gungun)
 
 An agentic honeypot that **engages scammers** with believable human-like conversations, **extracts financial intelligence** (UPI IDs, bank accounts, phone numbers, Aadhaar, PAN, phishing links), and **reports findings** via automated callbacks — all in real-time.
@@ -53,19 +53,22 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 
 ## Key Features
 
-| Feature                     | Description                                                                                |
-| --------------------------- | ------------------------------------------------------------------------------------------ |
-| **5-Layer Detection**       | Keyword → Pattern → India-specific → Behavioral → Confidence scoring                       |
-| **18+ Scam Types**          | Digital arrest, courier, KYC, UPI, lottery, investment, crypto, and more                   |
-| **Bilingual (EN + HI)**     | Full Hindi/Hinglish support — detection, agent responses, and LLM rephrasing               |
-| **Adaptive Agent**          | 15+ response pools × 2 languages (260+ phrases), context-aware rotation                    |
-| **Intelligence Extraction** | UPI IDs, bank accounts, phones, Aadhaar, PAN, emails, phishing links, crypto wallets       |
-| **LLM Enhancement**         | Groq Llama 3.3 70B via REST API with circuit breaker + auto-fallback (14,400 req/day free) |
-| **10 Simulation Scenarios** | Bank, UPI, lottery, KYC, digital arrest, courier, investment, job, utility scams           |
-| **Live Callbacks**          | Automatic GUVI platform reporting when sufficient intel gathered                           |
-| **Dark / Light Theme**      | Full dark + light theme system with CSS custom properties & glassmorphism                  |
-| **Production Ready**        | Rate limiting, request timing, session TTL cleanup, configurable CORS                      |
-| **Responsive Design**       | Mobile-first with hamburger menu, works on all screen sizes                                |
+| Feature                       | Description                                                                                  |
+| ----------------------------- | -------------------------------------------------------------------------------------------- |
+| **5-Layer Detection**         | Keyword → Pattern → India-specific → Behavioral → Confidence scoring                         |
+| **18+ Scam Types**            | Digital arrest, courier, KYC, UPI, lottery, investment, crypto, and more                     |
+| **Bilingual (EN + HI)**       | Full Hindi/Hinglish support — detection, agent responses, and LLM rephrasing                 |
+| **Adaptive Agent**            | 15+ response pools × 2 languages (260+ phrases), context-aware rotation                      |
+| **Intelligence Registry**     | Track UPI IDs, bank accounts, phones, emails, links — with frequency, confidence, recurrence |
+| **Pattern Correlation**       | Fingerprint scam tactics, cross-session similarity scoring, recurring threat detection       |
+| **Fraud Type Classification** | Professional labels (PAYMENT FRAUD, KYC PHISHING, etc.) with color-coded badges              |
+| **Excel Export**              | One-click export of intelligence registry as styled .xlsx workbook                           |
+| **Structured Reasoning**      | Detection verdicts with human-readable reasons explaining classification decisions           |
+| **LLM Enhancement**           | Groq Llama 3.3 70B via REST API with circuit breaker + auto-fallback (14,400 req/day free)   |
+| **10 Simulation Scenarios**   | Bank, UPI, lottery, KYC, digital arrest, courier, investment, job, utility scams             |
+| **Live Callbacks**            | Automatic GUVI platform reporting when sufficient intel gathered                             |
+| **Dark / Light Theme**        | Full dark + light theme system with CSS custom properties & glassmorphism                    |
+| **Production Ready**          | Rate limiting, request timing, session TTL cleanup, configurable CORS                        |
 
 ---
 
@@ -142,15 +145,20 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --app-dir app
 
 ## API Endpoints
 
-| Method | Path             | Auth | Description                             |
-| ------ | ---------------- | ---- | --------------------------------------- |
-| `GET`  | `/`              | No   | Health check                            |
-| `POST` | `/honeypot`      | Yes  | Process scam message → analysis + reply |
-| `GET`  | `/sessions`      | Yes  | List session summaries                  |
-| `GET`  | `/sessions/{id}` | Yes  | Session detail                          |
-| `GET`  | `/patterns`      | Yes  | Scam type & tactic aggregations         |
-| `GET`  | `/callbacks`     | Yes  | Callback history                        |
-| `GET`  | `/system/status` | Yes  | API, LLM, MongoDB status                |
+| Method | Path                          | Auth | Description                                         |
+| ------ | ----------------------------- | ---- | --------------------------------------------------- |
+| `GET`  | `/`                           | No   | Health check                                        |
+| `POST` | `/honeypot`                   | Yes  | Process scam message → analysis + reply             |
+| `GET`  | `/sessions`                   | Yes  | List session summaries                              |
+| `GET`  | `/sessions/{id}`              | Yes  | Session detail                                      |
+| `GET`  | `/sessions/{id}/analysis`     | Yes  | Structured analysis with reasoning + fraud type     |
+| `GET`  | `/patterns`                   | Yes  | Scam type & tactic aggregations                     |
+| `GET`  | `/callbacks`                  | Yes  | Callback history                                    |
+| `GET`  | `/intelligence/registry`      | Yes  | Tracked identifiers (filterable by type/risk)       |
+| `GET`  | `/intelligence/registry/{id}` | Yes  | Identifier detail — frequency, confidence, sessions |
+| `GET`  | `/intelligence/patterns`      | Yes  | Pattern correlation with similarity scoring         |
+| `GET`  | `/intelligence/export`        | Yes  | Export registry as styled Excel (.xlsx)             |
+| `GET`  | `/system/status`              | Yes  | API, LLM, MongoDB status                            |
 
 ### POST `/honeypot` — Request
 
@@ -214,8 +222,9 @@ trusthoneypot/
 │   ├── agent.py         # Honeypot agent (15+ response pools)
 │   ├── detector.py      # 5-layer scam detection engine
 │   ├── extractor.py     # Intelligence extraction (8 types)
+│   ├── intelligence.py  # Intelligence registry + pattern correlation (v2.1)
 │   ├── llm.py           # Groq Llama 3.3 70B integration (httpx)
-│   ├── db.py            # MongoDB persistence
+│   ├── db.py            # MongoDB persistence + indexes
 │   ├── memory.py        # In-memory session state
 │   ├── callback.py      # GUVI callback reporting
 │   ├── auth.py          # API key middleware
@@ -250,6 +259,6 @@ trusthoneypot/
 
 ## License
 
-MIT — Built with purpose for the India AI Impact Buildathon 2025.
+MIT — Built with purpose for the India AI Impact Buildathon 2026.
 
-**© 2025–2026 200 Hustlers — TrustHoneypot**
+**© 2026 200 Hustlers — TrustHoneypot**

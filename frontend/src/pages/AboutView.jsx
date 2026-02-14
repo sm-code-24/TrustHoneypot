@@ -57,19 +57,19 @@ const SOLUTION_HIGHLIGHTS = [
   {
     icon: Shield,
     title: "5-Layer Scam Detection",
-    desc: "Pattern matching, behavioral scoring, India-specific taxonomy, context analysis, and intelligence correlation work together to classify 18+ scam categories with zero false positives.",
+    desc: "Pattern matching, behavioral scoring, India-specific taxonomy, context analysis, and intelligence correlation work together to classify 18+ scam categories with structured detection reasoning and fraud type badges.",
     color: "from-blue-500 to-cyan-400",
   },
   {
     icon: Radio,
-    title: "Financial Intel Extraction",
-    desc: "Automatically captures UPI IDs, bank accounts, phone numbers, Aadhaar, PAN, and phishing URLs from scammer messages using specialized regex + contextual parsing.",
+    title: "Intelligence Registry",
+    desc: "Automatically captures and tracks UPI IDs, bank accounts, phone numbers, Aadhaar, PAN, and phishing URLs. v2.1 adds a full registry with clickable identifiers, recurring threat detection, and Excel export.",
     color: "from-emerald-500 to-teal-400",
   },
   {
     icon: Database,
-    title: "Threat Pattern Learning",
-    desc: "MongoDB-backed persistence stores session summaries and extracted intelligence, enabling continuous threat pattern analysis and repeat offender identification.",
+    title: "Pattern Correlation Engine",
+    desc: "MongoDB-backed persistence with pattern fingerprinting, similarity scoring, and cross-session correlation. Identifies repeat offenders and linked scam operations with confidence scoring.",
     color: "from-amber-500 to-orange-400",
   },
 ];
@@ -243,12 +243,14 @@ export default function AboutView() {
 
       {/* Key numbers */}
       <div className="glass rounded-2xl p-6 md:p-8">
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+        <div className="grid grid-cols-3 md:grid-cols-6 gap-4 text-center">
           {[
             { value: "18+", label: "Scam Categories" },
             { value: "5", label: "Detection Layers" },
             { value: "8", label: "Intel Extractors" },
             { value: "260+", label: "Response Templates" },
+            { value: "v2.1", label: "Current Version" },
+            { value: "3", label: "DB Collections" },
           ].map((stat) => (
             <div key={stat.label}>
               <div className="text-2xl md:text-3xl font-extrabold text-gradient">

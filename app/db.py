@@ -32,22 +32,41 @@ class DatabaseService:
         self._connect()
     
     def _connect(self):
-        logger.info(f"🗄️ DB INIT: pymongo={PYMONGO_AVAILABLE}, uri_set={bool(self.mongo_uri)}, uri_len={len(self.mongo_uri)}, db={self.db_name}")
+        logger.info(f"DB INIT: pymongo={PYMONGO_AVAILABLE}, uri_set={bool(self.mongo_uri)}, uri_len={len(self.mongo_uri)}, db={self.db_name}")
         if not PYMONGO_AVAILABLE:
-            logger.warning("🗄️ DB service DISABLED: pymongo not installed. Install with: pip install pymongo")
+            logger.warning("DB service DISABLED: pymongo not installed.")
             return
         if not self.mongo_uri:
-            logger.warning("🗄️ DB service DISABLED: MONGODB_URI not set in environment variables")
+            logger.warning("DB service DISABLED: MONGODB_URI not set")
             return
         try:
             self.client = MongoClient(self.mongo_uri, serverSelectionTimeoutMS=3000)
             self.client.admin.command("ping")
             self.db = self.client[self.db_name]
             self.enabled = True
-            logger.info(f"🗄️ DB CONNECTED: {self.db_name} — ready to store sessions & callbacks")
+            self._ensure_indexes()
+            logger.info(f"DB CONNECTED: {self.db_name} — ready to store sessions & callbacks")
         except Exception as e:
-            logger.error(f"🗄️ DB CONNECTION FAILED: {e}", exc_info=True)
+            logger.error(f"DB CONNECTION FAILED: {e}", exc_info=True)
             self.enabled = False
+    
+    def _ensure_indexes(self):
+        """Create indexes for all collections."""
+        if not self.enabled or self.db is None:
+            return
+        try:
+            self.db.session_summaries.create_index("sessionId", unique=True)
+            self.db.session_summaries.create_index("timestamp")
+            self.db.callback_records.create_index("sessionId", unique=True)
+            self.db.intelligence_registry.create_index("value", unique=True)
+            self.db.intelligence_registry.create_index("type")
+            self.db.intelligence_registry.create_index("riskLevel")
+            self.db.intelligence_registry.create_index("lastSeen")
+            self.db.pattern_registry.create_index("sessionId", unique=True)
+            self.db.pattern_registry.create_index("patternHash")
+            self.db.pattern_registry.create_index("timestamp")
+        except Exception as e:
+            logger.warning(f"Index creation warning (non-fatal): {e}")
     
     # ── Session Summaries ──────────────────────────────────────────────
     
@@ -63,8 +82,9 @@ class DatabaseService:
         tactics: List[str],
         response_mode: str = "rule_based",
         callback_sent: bool = False,
+        intelligence: dict = None,
     ):
-        """Persist a session summary (no raw messages)."""
+        """Persist a session summary with intelligence data."""
         if not self.enabled:
             logger.warning(f"DB not enabled: callback record for session {session_id} not saved.")
             return
@@ -82,6 +102,16 @@ class DatabaseService:
                 "callbackSent": callback_sent,
                 "timestamp": datetime.now(timezone.utc),
             }
+            # Store actual intelligence items for UI display
+            if intelligence:
+                doc["intelligence"] = {
+                    "bankAccounts": intelligence.get("bankAccounts", []),
+                    "upiIds": intelligence.get("upiIds", []),
+                    "phishingLinks": intelligence.get("phishingLinks", []),
+                    "phoneNumbers": intelligence.get("phoneNumbers", []),
+                    "suspiciousKeywords": intelligence.get("suspiciousKeywords", []),
+                    "emails": intelligence.get("emails", []),
+                }
             self.db.session_summaries.update_one(
                 {"sessionId": session_id},
                 {"$set": doc},
@@ -125,11 +155,12 @@ class DatabaseService:
         session_id: str,
         status: str,
         payload_summary: dict,
+        intelligence: dict = None,
     ):
-        """Save callback record (summary only, no raw intel)."""
-        logger.info(f"🗄️ SAVE CALLBACK RECORD: session={session_id[:8]}, status={status}, enabled={self.enabled}")
+        """Save callback record with full intelligence data."""
+        logger.info(f"SAVE CALLBACK RECORD: session={session_id[:8]}, status={status}, enabled={self.enabled}")
         if not self.enabled:
-            logger.warning(f"🗄️ DB NOT ENABLED: callback record for session {session_id[:8]} NOT saved to DB")
+            logger.warning(f"DB NOT ENABLED: callback record for session {session_id[:8]} NOT saved")
             return
         try:
             doc = {
@@ -138,6 +169,16 @@ class DatabaseService:
                 "payloadSummary": payload_summary,
                 "timestamp": datetime.now(timezone.utc),
             }
+            # Store actual intelligence items for UI highlighting
+            if intelligence:
+                doc["intelligence"] = {
+                    "bankAccounts": intelligence.get("bankAccounts", []),
+                    "upiIds": intelligence.get("upiIds", []),
+                    "phishingLinks": intelligence.get("phishingLinks", []),
+                    "phoneNumbers": intelligence.get("phoneNumbers", []),
+                    "suspiciousKeywords": intelligence.get("suspiciousKeywords", []),
+                    "emails": intelligence.get("emails", []),
+                }
             self.db.callback_records.update_one(
                 {"sessionId": session_id},
                 {"$set": doc},

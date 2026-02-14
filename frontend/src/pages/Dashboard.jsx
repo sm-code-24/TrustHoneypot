@@ -208,12 +208,12 @@ export default function Dashboard() {
           <p className="text-[11px]" style={{ color: "var(--text-muted)" }}>
             &copy; {year}{" "}
             <Link
-              to="/about"
+              to="/dashboard/about"
               style={{ color: "var(--text-tertiary)" }}
               className="font-medium hover:underline">
               200 Hustlers
             </Link>
-            {" — "}TrustHoneypot — Made for AI Impact Buildathon PS-2
+            {" — "}TrustHoneypot v2.1 — Made for AI Impact Buildathon PS-2
           </p>
         </footer>
       </div>

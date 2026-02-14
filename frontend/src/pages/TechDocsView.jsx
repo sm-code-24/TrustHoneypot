@@ -428,10 +428,35 @@ export default function TechDocsView() {
                 ],
                 [
                   "GET",
+                  "/sessions/{id}/analysis",
+                  "Structured analysis — verdict, reasoning, fraud type, pattern similarity",
+                ],
+                [
+                  "GET",
                   "/patterns",
                   "Aggregated scam patterns and category statistics",
                 ],
                 ["GET", "/callbacks", "Callback history and delivery status"],
+                [
+                  "GET",
+                  "/intelligence/registry",
+                  "Tracked identifiers — filterable by type and risk level",
+                ],
+                [
+                  "GET",
+                  "/intelligence/registry/{id}",
+                  "Identifier detail — frequency, confidence, associated sessions",
+                ],
+                [
+                  "GET",
+                  "/intelligence/patterns",
+                  "Pattern correlation — fingerprints, similarity scoring, recurrence",
+                ],
+                [
+                  "GET",
+                  "/intelligence/export",
+                  "Export intelligence registry as styled Excel (.xlsx) workbook",
+                ],
                 [
                   "GET",
                   "/system/status",
@@ -463,6 +488,66 @@ export default function TechDocsView() {
               ))}
             </tbody>
           </table>
+        </div>
+      </section>
+
+      {/* v2.1 Features */}
+      <section className="glass rounded-2xl p-6 md:p-8">
+        <h3
+          className="text-lg font-semibold mb-5 flex items-center gap-2"
+          style={{ color: "var(--text-heading)" }}>
+          <Zap size={18} className="text-purple-400" />
+          v2.1 Enhancements
+        </h3>
+        <div className="grid sm:grid-cols-2 gap-3">
+          {[
+            {
+              title: "Intelligence Registry",
+              desc: "Persistent tracking of all extracted identifiers (UPI, phone, bank, email, links) with frequency counting, confidence scoring, recurring threat detection, and privacy-preserving masking.",
+            },
+            {
+              title: "Pattern Correlation Engine",
+              desc: "Fingerprinting of scam tactics with cross-session similarity scoring. Identifies linked operations and repeat offenders across sessions.",
+            },
+            {
+              title: "Structured Detection Reasoning",
+              desc: "Each analysis now includes human-readable detection reasons explaining why a session was classified as a specific fraud type.",
+            },
+            {
+              title: "Fraud Type Classification",
+              desc: "Sessions and callbacks display professional fraud type labels (PAYMENT FRAUD, KYC PHISHING, LOTTERY SCAM, etc.) with color-coded badges.",
+            },
+            {
+              title: "Excel Export",
+              desc: "One-click export of the intelligence registry as a styled .xlsx workbook with formatted headers, conditional formatting, and auto-sized columns.",
+            },
+            {
+              title: "Clickable Intelligence",
+              desc: "Registry identifiers are clickable — opening a detail modal showing confidence, frequency, recurrence status, associated sessions, and fraud types.",
+            },
+          ].map((item) => (
+            <div
+              key={item.title}
+              className="flex items-start gap-2 px-3 py-2.5 rounded-lg border"
+              style={{
+                background: "var(--bg-tertiary)",
+                borderColor: "var(--border-primary)",
+              }}>
+              <div className="w-1.5 h-1.5 rounded-full bg-purple-400 flex-shrink-0 mt-1.5" />
+              <div>
+                <span
+                  className="text-sm font-medium"
+                  style={{ color: "var(--text-secondary)" }}>
+                  {item.title}
+                </span>
+                <p
+                  className="text-xs mt-0.5 leading-relaxed"
+                  style={{ color: "var(--text-tertiary)" }}>
+                  {item.desc}
+                </p>
+              </div>
+            </div>
+          ))}
         </div>
       </section>
 

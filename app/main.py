@@ -1,5 +1,5 @@
 """
-Agentic Honey-Pot API v2.0.0
+Agentic Honey-Pot API v2.1.0
 Built for the India AI Impact Buildathon (GUVI) - Problem Statement 2
 
 This is the main entry point for the honeypot system. It receives suspected
@@ -24,6 +24,7 @@ from fastapi.responses import JSONResponse
 from typing import Optional
 import logging
 import time
+from datetime import datetime, timezone
 
 from models import (
     HoneypotRequest,
@@ -40,6 +41,17 @@ from callback import send_final_callback, should_send_callback
 from llm import llm_service
 from db import db_service
 from simulator import simulator
+from intelligence import (
+    IntelligenceRegistryService,
+    PatternCorrelationService,
+    classify_fraud_type,
+    get_fraud_color,
+    generate_detection_reasoning,
+)
+
+# Initialize intelligence services
+intel_registry = IntelligenceRegistryService(db_service)
+pattern_engine = PatternCorrelationService(db_service)
 
 # Set up logging so we can see what's happening
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
@@ -53,20 +65,22 @@ logger = logging.getLogger(__name__)
 app = FastAPI(
     title="Agentic Honey-Pot API",
     description="Scam Detection & Intelligence Extraction for GUVI Hackathon",
-    version="2.0.0",
+    version="2.1.0",
     docs_url="/docs" if os.getenv("ENVIRONMENT", "development") != "production" else None,
     redoc_url=None,
 )
 
 # CORS — restrict in production, wide open in dev
 _default_origins = "https://trusthoneypot.tech,https://www.trusthoneypot.tech,http://localhost:5173,http://localhost:3000"
-_allowed_origins = os.getenv("CORS_ORIGINS", _default_origins).split(",")
+_allowed_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", _default_origins).split(",") if o.strip()]
+logger.info(f"CORS allowed origins: {_allowed_origins}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["X-Process-Time"],
 )
 
 
@@ -75,6 +89,9 @@ app.add_middleware(
 @app.middleware("http")
 async def add_timing_header(request: Request, call_next):
     """Add X-Process-Time header and log request timing."""
+    # Let CORS middleware handle OPTIONS preflight directly
+    if request.method == "OPTIONS":
+        return await call_next(request)
     start = time.perf_counter()
     response = await call_next(request)
     elapsed_ms = (time.perf_counter() - start) * 1000
@@ -92,6 +109,9 @@ RATE_LIMIT = int(os.getenv("RATE_LIMIT_PER_MINUTE", "60"))
 @app.middleware("http")
 async def rate_limit_middleware(request: Request, call_next):
     """Basic per-IP rate limiting for production safety."""
+    # Let CORS middleware handle OPTIONS preflight directly
+    if request.method == "OPTIONS":
+        return await call_next(request)
     client_ip = request.client.host if request.client else "unknown"
     now = time.time()
     window = 60  # 1 minute window
@@ -155,7 +175,7 @@ async def health_check():
     return {
         "status": "online",
         "service": "Agentic Honey-Pot API",
-        "version": "2.0.0",
+        "version": "2.1.0",
         "languages": ["en", "hi"],
     }
 
@@ -283,7 +303,8 @@ async def process_message(
                                 "bankAccounts": len(intelligence.get("bankAccounts", [])),
                                 "phishingLinks": len(intelligence.get("phishingLinks", [])),
                             }
-                        }
+                        },
+                        intelligence=intelligence,
                     )
         
         # Save session summary to DB (every message updates the summary)
@@ -307,6 +328,32 @@ async def process_message(
             tactics=tactics_list,
             response_mode=reply_source,
             callback_sent=memory.is_callback_sent(session_id),
+            intelligence=intelligence,
+        )
+        
+        # Register intelligence in the registry (v2.1)
+        intel_registry.register_session_intelligence(
+            session_id=session_id,
+            intelligence=intelligence,
+            risk_level=detection_details.risk_level or "minimal",
+            confidence=detection_details.confidence,
+        )
+        
+        # Register pattern for correlation (v2.1)
+        all_identifiers = (
+            intelligence.get("upiIds", []) +
+            intelligence.get("phoneNumbers", []) +
+            intelligence.get("bankAccounts", []) +
+            intelligence.get("phishingLinks", []) +
+            intelligence.get("emails", [])
+        )
+        correlation = pattern_engine.register_pattern(
+            session_id=session_id,
+            scam_type=detection_details.scam_type or "unknown",
+            tactics=tactics_list,
+            identifiers=all_identifiers,
+            risk_level=detection_details.risk_level or "minimal",
+            confidence=detection_details.confidence,
         )
         
         # Build response (status, reply, plus enriched metadata for UI)
@@ -480,7 +527,8 @@ async def run_simulation(
                         "totalMessages": total_messages,
                         "intelligenceCounts": intel_counts,
                         "source": "simulation",
-                    }
+                    },
+                    intelligence=intelligence,
                 )
                 logger.info(f"[SIM] [{session_id[:8]}] Callback record saved to DB")
         
@@ -497,6 +545,7 @@ async def run_simulation(
             tactics=tactics_list,
             response_mode=reply_source,
             callback_sent=memory.is_callback_sent(session_id),
+            intelligence=intelligence,
         )
         
         stage_info = agent.get_engagement_stage(session_id, msg_count, scam_confirmed, callback_sent or memory.is_callback_sent(session_id))
@@ -541,9 +590,12 @@ async def get_sessions(
     # Normalize DB records (camelCase) to snake_case for frontend
     normalized = []
     for s in summaries:
+        scam_type = s.get("scamType", "unknown")
         normalized.append({
             "session_id": s.get("sessionId", ""),
-            "scam_type": s.get("scamType", "unknown"),
+            "scam_type": scam_type,
+            "fraud_type": classify_fraud_type(scam_type),
+            "fraud_color": get_fraud_color(classify_fraud_type(scam_type)),
             "risk_level": s.get("riskLevel", "minimal"),
             "confidence": s.get("confidence", 0.0),
             "message_count": s.get("messageCount", 0),
@@ -615,10 +667,16 @@ async def get_callbacks(
             # Ensure it ends with Z for UTC
             if isinstance(ts, str) and not ts.endswith('Z') and '+' not in ts:
                 ts = ts + 'Z'
+        # Lookup session scam type for fraud label
+        session_summary = db_service.get_session_summary(r.get("sessionId", ""))
+        scam_type = session_summary.get("scamType", "unknown") if session_summary else "unknown"
         normalized.append({
             "session_id": r.get("sessionId", ""),
             "status": r.get("status", "unknown"),
             "payload_summary": r.get("payloadSummary", None),
+            "intelligence": r.get("intelligence", None),
+            "fraud_type": classify_fraud_type(scam_type),
+            "fraud_color": get_fraud_color(classify_fraud_type(scam_type)),
             "timestamp": ts,
         })
     return {"callbacks": normalized}
@@ -628,10 +686,203 @@ async def get_callbacks(
 async def get_system_status(api_key: str = Depends(verify_api_key)):
     """System status for settings panel."""
     return {
-        "api": {"status": "online", "version": "2.0.0"},
+        "api": {"status": "online", "version": "2.1.0"},
         "llm": llm_service.get_status(),
         "database": db_service.get_status(),
     }
+
+
+# ─── Intelligence Registry Endpoints (v2.1) ──────────────────────────────────
+
+@app.get("/intelligence/registry")
+async def get_intelligence_registry(
+    type: Optional[str] = Query(default=None, description="Filter by type: UPI, Phone, Email, Bank, Link"),
+    risk: Optional[str] = Query(default=None, description="Filter by risk level"),
+    limit: int = Query(default=100, le=500),
+    api_key: str = Depends(verify_api_key),
+):
+    """Get intelligence registry entries with optional filters."""
+    entries = intel_registry.get_registry(id_type=type, risk_level=risk, limit=limit)
+    stats = intel_registry.get_registry_stats()
+    return {"entries": entries, "stats": stats}
+
+
+@app.get("/intelligence/registry/{identifier}")
+async def get_identifier_detail(
+    identifier: str,
+    api_key: str = Depends(verify_api_key),
+):
+    """Get detailed info for a specific identifier."""
+    detail = intel_registry.get_identifier_detail(identifier)
+    if not detail:
+        raise HTTPException(status_code=404, detail="Identifier not found")
+    return detail
+
+
+@app.get("/intelligence/patterns")
+async def get_pattern_correlation(api_key: str = Depends(verify_api_key)):
+    """Get pattern correlation statistics."""
+    stats = pattern_engine.get_pattern_stats()
+    return stats
+
+
+@app.get("/sessions/{session_id}/analysis")
+async def get_session_analysis(
+    session_id: str,
+    api_key: str = Depends(verify_api_key),
+):
+    """Get enhanced session analysis with detection reasoning (v2.1)."""
+    summary = db_service.get_session_summary(session_id)
+    det = detector.get_detection_details(session_id)
+    intel = extractor.get_intelligence_summary(session_id)
+    
+    # Pattern correlation
+    tactics = summary.get("tactics", []) if summary else []
+    scam_type = summary.get("scamType", "unknown") if summary else getattr(det, "scam_type", "unknown")
+    
+    # Get correlation info from pattern registry
+    correlation_info = {"match_count": 0, "recurring": False, "similarity_score": 0.0}
+    if db_service.enabled and db_service.db is not None:
+        try:
+            pattern_doc = db_service.db.pattern_registry.find_one(
+                {"sessionId": session_id}, {"_id": 0}
+            )
+            if pattern_doc:
+                from pymongo import DESCENDING
+                similar = db_service.db.pattern_registry.count_documents(
+                    {"patternHash": pattern_doc.get("patternHash"), "sessionId": {"$ne": session_id}}
+                )
+                correlation_info["match_count"] = similar
+                correlation_info["recurring"] = similar > 0
+                correlation_info["similarity_score"] = 1.0 if similar > 0 else 0.0
+                correlation_info["pattern_hash"] = pattern_doc.get("patternHash")
+        except Exception:
+            pass
+    
+    reasoning = generate_detection_reasoning(
+        scam_type=scam_type,
+        risk_level=getattr(det, "risk_level", "minimal"),
+        confidence=getattr(det, "confidence", 0.0),
+        tactics=tactics,
+        intelligence_counts=intel,
+        pattern_match_count=correlation_info["match_count"],
+        similarity_score=correlation_info["similarity_score"],
+        recurring=correlation_info["recurring"],
+    )
+    
+    return {
+        "session_id": session_id,
+        "summary": summary,
+        "detection": {
+            "riskLevel": getattr(det, "risk_level", "minimal"),
+            "confidence": getattr(det, "confidence", 0.0),
+            "scamType": scam_type,
+            "riskScore": getattr(det, "total_score", 0),
+        },
+        "intelligenceCounts": intel,
+        "reasoning": reasoning,
+        "correlation": correlation_info,
+    }
+
+
+@app.get("/intelligence/export")
+async def export_intelligence_excel(
+    type: Optional[str] = Query(default=None),
+    risk: Optional[str] = Query(default=None),
+    date_from: Optional[str] = Query(default=None, description="ISO date YYYY-MM-DD"),
+    date_to: Optional[str] = Query(default=None, description="ISO date YYYY-MM-DD"),
+    api_key: str = Depends(verify_api_key),
+):
+    """Export intelligence registry to Excel (.xlsx)."""
+    from fastapi.responses import StreamingResponse
+    import io
+    
+    try:
+        from openpyxl import Workbook  # type: ignore[import-untyped]
+        from openpyxl.styles import Font, PatternFill, Alignment, Border, Side  # type: ignore[import-untyped]
+    except ImportError:
+        raise HTTPException(status_code=500, detail="openpyxl not installed")
+    
+    entries = intel_registry.get_registry(id_type=type, risk_level=risk, limit=5000)
+    
+    # Apply date filtering
+    if date_from or date_to:
+        filtered = []
+        for e in entries:
+            first_seen = e.get("firstSeen", "")
+            if isinstance(first_seen, str):
+                date_part = first_seen[:10]
+            else:
+                date_part = ""
+            if date_from and date_part < date_from:
+                continue
+            if date_to and date_part > date_to:
+                continue
+            filtered.append(e)
+        entries = filtered
+    
+    wb = Workbook()
+    ws = wb.active
+    assert ws is not None, "Workbook must have an active sheet"
+    ws.title = "Intelligence Registry"
+    
+    # Header style
+    header_font = Font(bold=True, color="FFFFFF", size=11)
+    header_fill = PatternFill("solid", fgColor="1F4E79")
+    header_alignment = Alignment(horizontal="center", vertical="center")
+    thin_border = Border(
+        left=Side(style="thin"), right=Side(style="thin"),
+        top=Side(style="thin"), bottom=Side(style="thin"),
+    )
+    
+    headers = ["Identifier", "Type", "Risk Level", "Confidence %", "Occurrences", "First Seen", "Last Seen", "Sessions"]
+    for col, header in enumerate(headers, 1):
+        cell = ws.cell(row=1, column=col, value=header)
+        cell.font = header_font
+        cell.fill = header_fill
+        cell.alignment = header_alignment
+        cell.border = thin_border
+    
+    # Risk color fills
+    risk_fills = {
+        "critical": PatternFill("solid", fgColor="FFCCCC"),
+        "high": PatternFill("solid", fgColor="FFE0CC"),
+        "medium": PatternFill("solid", fgColor="FFFACC"),
+        "low": PatternFill("solid", fgColor="CCFFCC"),
+    }
+    
+    for row_idx, entry in enumerate(entries, 2):
+        ws.cell(row=row_idx, column=1, value=entry.get("masked", entry.get("value", ""))).border = thin_border
+        ws.cell(row=row_idx, column=2, value=entry.get("type", "")).border = thin_border
+        risk_cell = ws.cell(row=row_idx, column=3, value=(entry.get("riskLevel", "")).upper())
+        risk_cell.border = thin_border
+        risk_cell.fill = risk_fills.get(entry.get("riskLevel", ""), PatternFill())
+        conf_cell = ws.cell(row=row_idx, column=4, value=round(entry.get("confidence", 0) * 100, 1))
+        conf_cell.border = thin_border
+        conf_cell.alignment = Alignment(horizontal="center")
+        occ_cell = ws.cell(row=row_idx, column=5, value=entry.get("occurrences", 0))
+        occ_cell.border = thin_border
+        occ_cell.alignment = Alignment(horizontal="center")
+        ws.cell(row=row_idx, column=6, value=str(entry.get("firstSeen", ""))[:19]).border = thin_border
+        ws.cell(row=row_idx, column=7, value=str(entry.get("lastSeen", ""))[:19]).border = thin_border
+        sessions = entry.get("sessions", [])
+        ws.cell(row=row_idx, column=8, value=", ".join(s[:8] for s in sessions)).border = thin_border
+    
+    # Auto-width
+    for col in ws.columns:
+        max_length = max(len(str(cell.value or "")) for cell in col)
+        ws.column_dimensions[col[0].column_letter].width = min(max_length + 4, 40)  # type: ignore[union-attr]
+    
+    output = io.BytesIO()
+    wb.save(output)
+    output.seek(0)
+    
+    filename = f"trusthoneypot_intelligence_{datetime.now(timezone.utc).strftime('%Y%m%d_%H%M%S')}.xlsx"
+    return StreamingResponse(
+        output,
+        media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+        headers={"Content-Disposition": f"attachment; filename={filename}"},
+    )
 
 
 if __name__ == "__main__":
