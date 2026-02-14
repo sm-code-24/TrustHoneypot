@@ -7,8 +7,7 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 
 **Live Demo:**
 
-- Frontend: [https://trusthoneypot.tech](https://trusthoneypot.tech)
-- Backend API: [https://trusthoneypot-api.up.railway.app](https://trusthoneypot-api.up.railway.app)
+[![Check Live](https://img.shields.io/badge/Check%20Live-trusthoneypot.tech-blue?style=for-the-badge&logo=firefox)](https://trusthoneypot.tech)
 
 ---
 
@@ -98,7 +97,6 @@ Create a `.env` file in the project root:
 
 ```env
 API_KEY=your-api-key-here
-CALLBACK_URL=https://your-govt-portal-endpoint
 GROQ_API_KEY=your-groq-api-key          # from console.groq.com
 GROQ_MODEL=llama-3.3-70b-versatile       # default model
 MONGDB_URI=mongodb+srv://...            # optional

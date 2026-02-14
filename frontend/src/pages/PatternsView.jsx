@@ -355,7 +355,7 @@ export default function PatternsView() {
                     {(t._id || "unknown").replace(/_/g, " ")}
                   </div>
                   <div
-                    className="h-1 rounded-full mt-1 overflow-hidden"
+                    className="h-2 rounded-full mt-1.5 overflow-hidden"
                     style={{ background: "var(--bar-track)" }}>
                     <div
                       className="h-full rounded-full bg-emerald-500 transition-all duration-700"

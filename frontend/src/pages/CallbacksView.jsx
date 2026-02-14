@@ -219,7 +219,7 @@ export default function CallbacksView() {
           </h3>
         </div>
         <div className="overflow-x-auto">
-          <table className="w-full text-sm">
+          <table className="w-full text-sm table-fixed">
             <thead>
               <tr
                 className="text-xs border-b"
@@ -227,15 +227,21 @@ export default function CallbacksView() {
                   color: "var(--text-tertiary)",
                   borderColor: "var(--border-primary)",
                 }}>
-                <th className="text-left px-5 py-2.5 font-medium">Session</th>
-                <th className="text-center px-5 py-2.5 font-medium">Status</th>
-                <th className="text-left px-5 py-2.5 font-medium">
+                <th className="text-left px-4 py-2.5 font-medium w-[15%]">
+                  Session
+                </th>
+                <th className="text-center px-4 py-2.5 font-medium w-[10%]">
+                  Status
+                </th>
+                <th className="text-left px-4 py-2.5 font-medium w-[20%]">
                   Fraud Type
                 </th>
-                <th className="text-left px-5 py-2.5 font-medium hidden sm:table-cell">
+                <th className="text-left px-4 py-2.5 font-medium w-[20%] hidden sm:table-cell">
                   Time
                 </th>
-                <th className="text-left px-5 py-2.5 font-medium">Payload</th>
+                <th className="text-left px-4 py-2.5 font-medium w-[35%]">
+                  Payload
+                </th>
               </tr>
             </thead>
             <tbody>
@@ -265,11 +271,11 @@ export default function CallbacksView() {
                     className="border-b transition-colors align-top"
                     style={{ borderColor: "var(--border-primary)" }}>
                     <td
-                      className="px-5 py-2.5 font-mono text-xs"
+                      className="px-4 py-2.5 font-mono text-xs w-[15%]"
                       style={{ color: "var(--text-secondary)" }}>
                       {(cb.session_id || "").slice(0, 8)}
                     </td>
-                    <td className="px-5 py-2.5">
+                    <td className="px-4 py-2.5 w-[10%]">
                       <div className="flex items-center justify-center">
                         <StatusIcon
                           size={14}
@@ -282,11 +288,11 @@ export default function CallbacksView() {
                         />
                       </div>
                     </td>
-                    <td className="px-5 py-2.5">
+                    <td className="px-4 py-2.5 w-[20%]">
                       <FraudBadge label={cb.fraud_type || "GENERIC SCAM"} />
                     </td>
                     <td
-                      className="px-5 py-2.5 text-xs hidden sm:table-cell"
+                      className="px-4 py-2.5 text-xs w-[20%] hidden sm:table-cell"
                       style={{ color: "var(--text-tertiary)" }}>
                       {cb.timestamp ?
                         new Date(cb.timestamp).toLocaleString("en-IN", {
@@ -296,7 +302,7 @@ export default function CallbacksView() {
                         })
                       : "—"}
                     </td>
-                    <td className="px-5 py-2.5">
+                    <td className="px-4 py-2.5 w-[35%]">
                       <PayloadDrawer
                         data={cb.payload_summary}
                         intelligence={cb.intelligence}
