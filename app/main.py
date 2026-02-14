@@ -231,7 +231,10 @@ async def process_message(
         agent_reply = agent.get_reply(session_id, current_message, msg_count, scam_confirmed)
         reply_source = "rule_based"
         
-        # If LLM mode requested, try LLM generation/rephrasing
+        # ──── LLM Response Generation ────────────────────────────────────────────
+        # If LLM mode requested, we have two paths:
+        # 1. Greeting-stage messages → use dedicated GREETING_LLM_PROMPT
+        # 2. Normal scam messages → rephrase rule-based reply for naturalness
         if response_mode == "llm":
             logger.info(f"[{session_id[:8]}] [LLM] Mode requested. enabled={llm_service.enabled}, api_key_set={bool(llm_service.api_key)}, model={llm_service.model_name}")
             if not llm_service.enabled:
@@ -239,7 +242,10 @@ async def process_message(
                 logger.warning(f"[{session_id[:8]}] [LLM] NOT ENABLED — status: {json.dumps(llm_status)}")
                 reply_source = "rule_based_fallback"
             elif is_greeting_message(current_message):
-                # Greeting-stage: use dedicated greeting LLM prompt
+                # PATH 1: Greeting-stage detection
+                # Use specialized greeting prompt that instructs LLM to be warm and polite,
+                # not defensive or suspicious. This prevents the old behavior where LLM
+                # would respond with "I'm not sure what this is about..." to simple "hi" messages.
                 logger.info(f"[{session_id[:8]}] [LLM] Greeting detected, using GREETING_LLM_PROMPT")
                 try:
                     llm_reply, llm_source = await llm_service.generate_greeting_reply(
@@ -251,7 +257,8 @@ async def process_message(
                     logger.warning(f"[{session_id[:8]}] [LLM] Greeting generation failed: {llm_err}, using rule-based")
                     reply_source = "rule_based_fallback"
             else:
-                # Normal scam engagement: rephrase rule-based reply via LLM
+                # PATH 2: Normal scam engagement
+                # Rephrase the rule-based reply via LLM for more natural language
                 strategy = agent.get_current_strategy(session_id)
                 try:
                     llm_reply, llm_source = await llm_service.rephrase_reply(
@@ -372,13 +379,26 @@ async def process_message(
         # Build response (status, reply, plus enriched metadata for UI)
         stage_info = agent.get_engagement_stage(session_id, msg_count, scam_confirmed, callback_sent)
         
+        # ──── Greeting Stage Override ─────────────────────────────────────────────
+        # During Stage 0 (Rapport Initialization), when we've only received a greeting,
+        # we don't want to show false positive scam indicators in the UI.
+        # Override risk/confidence to show clean monitoring state:
+        # - risk_level = "minimal" (green)
+        # - confidence = 0.0 (no detection yet)
+        # - scam_type = "unknown" (not classified yet)
+        # This gives a clean UI state until the scammer reveals their actual intent.
+        is_greeting_stage = agent.is_in_greeting_stage(session_id)
+        resp_risk_level = "minimal" if is_greeting_stage else detection_details.risk_level
+        resp_confidence = 0.0 if is_greeting_stage else detection_details.confidence
+        resp_scam_type = "unknown" if is_greeting_stage else (detection_details.scam_type or "unknown")
+        
         # v2.1 enrichment: fraud classification + detection reasoning
-        fraud_type = classify_fraud_type(detection_details.scam_type or "unknown")
+        fraud_type = classify_fraud_type(resp_scam_type)
         fraud_color = get_fraud_color(fraud_type)
         reasoning = generate_detection_reasoning(
-            scam_type=detection_details.scam_type or "unknown",
-            risk_level=detection_details.risk_level or "minimal",
-            confidence=detection_details.confidence,
+            scam_type=resp_scam_type,
+            risk_level=resp_risk_level or "minimal",
+            confidence=resp_confidence,
             tactics=tactics_list,
             intelligence_counts=intel_counts,
             pattern_match_count=correlation.get("match_count", 0),
@@ -391,10 +411,10 @@ async def process_message(
             reply=agent_reply,
             reply_source=reply_source,
             scam_detected=scam_confirmed,
-            risk_score=risk_score,
-            risk_level=detection_details.risk_level,
-            confidence=detection_details.confidence,
-            scam_type=detection_details.scam_type or "unknown",
+            risk_score=0 if is_greeting_stage else risk_score,
+            risk_level=resp_risk_level,
+            confidence=resp_confidence,
+            scam_type=resp_scam_type,
             scam_stage=stage_info["stage"],
             stage_info=stage_info,
             intelligence_counts=intel_counts,
@@ -723,16 +743,6 @@ async def get_callbacks(
             "timestamp": ts,
         })
     return {"callbacks": normalized}
-
-
-@app.get("/system/status")
-async def get_system_status(api_key: str = Depends(verify_api_key)):
-    """System status for settings panel."""
-    return {
-        "api": {"status": "online", "version": "2.1.0"},
-        "llm": llm_service.get_status(),
-        "database": db_service.get_status(),
-    }
 
 
 # ─── Intelligence Registry Endpoints (v2.1) ──────────────────────────────────

@@ -159,7 +159,6 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --app-dir app
 | `GET`  | `/intelligence/patterns`      | Yes  | Pattern correlation with similarity scoring         |
 | `GET`  | `/intelligence/export`        | Yes  | Export registry as styled Excel (.xlsx)             |
 | `POST` | `/intelligence/backfill`      | Yes  | Re-populate registry from existing session data     |
-| `GET`  | `/system/status`              | Yes  | API, LLM, MongoDB status                            |
 
 ### POST `/honeypot` — Request
 

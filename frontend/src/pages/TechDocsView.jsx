@@ -462,11 +462,6 @@ export default function TechDocsView() {
                   "/intelligence/backfill",
                   "Re-populate intelligence & pattern registries from existing session data",
                 ],
-                [
-                  "GET",
-                  "/system/status",
-                  "System health — LLM status, DB connection, uptime",
-                ],
               ].map(([method, path, desc]) => (
                 <tr key={path}>
                   <td className="py-2.5">

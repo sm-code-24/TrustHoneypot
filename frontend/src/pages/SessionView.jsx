@@ -135,6 +135,7 @@ function StageProgress({ stageInfo }) {
   if (!stageInfo) return null;
   const progress = stageInfo.progress || 0;
   const stageColors = {
+    rapport_initialization: "from-green-400 to-emerald-300",
     initial_contact: "from-slate-500 to-slate-400",
     rapport_building: "from-blue-500 to-cyan-400",
     urgency_response: "from-amber-500 to-orange-400",

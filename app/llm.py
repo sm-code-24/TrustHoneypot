@@ -41,6 +41,8 @@ GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 
 # ─── Greeting Detection ───────────────────────────────────────────────────────
 
+# Common greeting phrases in English, Hindi, and Hinglish
+# Used to identify when a scammer is just starting the conversation with a simple greeting
 _GREETING_PHRASES = [
     "hi", "hello", "hey", "hii", "hiii", "helo", "helo",
     "good morning", "good afternoon", "good evening", "good night",
@@ -52,6 +54,8 @@ _GREETING_PHRASES = [
     "howdy", "greetings", "sup", "yo",
 ]
 
+# Keywords that indicate scam/fraud intent
+# If these appear in a message, it's NOT just a greeting
 _SCAM_KEYWORDS = [
     "account", "bank", "verify", "kyc", "suspend", "block", "urgent",
     "payment", "pay", "upi", "otp", "pin", "password", "refund",
@@ -69,28 +73,43 @@ _SCAM_KEYWORDS = [
 def is_greeting_message(text: str) -> bool:
     """Detect if message is a simple greeting with no scam indicators.
 
-    Conditions:
-    - Message contains a greeting phrase
-    - Message length <= 4 words
+    This function identifies the initial greeting stage of a scam attempt,
+    where the scammer is just trying to establish contact before launching
+    their actual scam pitch.
+
+    Conditions for a message to be classified as a greeting:
+    - Message contains a common greeting phrase
+    - Message length <= 4 words (keeps it simple)
     - No scam-related keywords present
     - No urgency/payment/verification indicators
+
+    Examples:
+        - "hi" → True
+        - "hello sir" → True
+        - "good morning" → True
+        - "namaste ji" → True
+        - "hi verify your account" → False (has scam keyword)
+        - "hello i am calling from bank regarding your kyc" → False (too long + scam keywords)
     """
     cleaned = text.strip().lower().rstrip(".,!?;:'\"")
     words = cleaned.split()
 
+    # Reject messages that are too long (likely scam pitch, not just greeting)
     if len(words) > 4:
         return False
 
-    # Check for scam keywords — reject immediately
+    # Check for scam keywords — reject immediately if found
+    # This prevents "hi your account is suspended" from being treated as greeting
     for kw in _SCAM_KEYWORDS:
         if kw in cleaned:
             return False
 
-    # Check if the message matches or contains a greeting phrase
+    # Check if the message contains a greeting phrase
+    # We match exact, prefix, or suffix to handle punctuation and spacing
     for phrase in _GREETING_PHRASES:
         if cleaned == phrase or cleaned.startswith(phrase + " ") or cleaned.endswith(" " + phrase):
             return True
-        # Also match if the whole message is just the greeting (possibly with punctuation)
+        # Also match if the whole message is just the greeting with minor variations
         if phrase in cleaned and len(words) <= 3:
             return True
 
@@ -240,16 +259,34 @@ class LLMService:
         """
         Generate a natural greeting response using the dedicated GREETING_LLM_PROMPT.
 
+        This method is called when we detect a greeting-stage message (e.g., "hi", "hello").
+        It uses a specialized prompt that instructs the LLM to respond warmly but cautiously,
+        without being defensive or mentioning scams.
+
+        Args:
+            scammer_message: The greeting message from the scammer (e.g., "hello sir")
+
         Returns:
-            (final_reply, source) where source is "llm" | "rule_based" | "rule_based_fallback"
+            Tuple of (final_reply, source) where:
+            - final_reply: The generated greeting response
+            - source: "llm" (successful LLM call), "rule_based" (LLM disabled), 
+                     or "rule_based_fallback" (LLM failed/timeout)
+
+        Examples:
+            Input: "hi"
+            Output: ("Hello! Who is this?", "llm")
+        
+            Input: "good morning"
+            Output: ("Good morning ji! Kaun bol rahe ho?", "llm")
         """
         import random as _random
 
+        # If LLM service is disabled, use rule-based fallback immediately
         if not self.enabled:
             logger.warning("🤖 LLM SKIP (greeting): service not enabled")
             return _random.choice(GREETING_FALLBACK_RESPONSES), "rule_based"
 
-        # Circuit breaker check
+        # Circuit breaker check — if we've had too many failures, skip LLM temporarily
         now = time.time()
         if now < self._backoff_until:
             logger.debug("LLM circuit breaker active during greeting, using fallback")
@@ -259,8 +296,12 @@ class LLMService:
         start_time = time.time()
 
         try:
+            # Construct the prompt for the LLM
+            # The GREETING_LLM_PROMPT already contains detailed instructions,
+            # we just need to provide the actual greeting message
             prompt = f"Greeting received: {scammer_message}\n\nRespond naturally:"
 
+            # Call the LLM with timeout protection
             llm_reply = await asyncio.wait_for(
                 self._generate_with_prompt(GREETING_LLM_PROMPT, prompt),
                 timeout=self.timeout_ms / 1000.0
@@ -268,7 +309,9 @@ class LLMService:
 
             elapsed_ms = (time.time() - start_time) * 1000
 
+            # Validate the response — ensure it's not empty and passes safety checks
             if llm_reply and self._is_safe(llm_reply):
+                # Success — update metrics and return LLM response
                 self._consecutive_failures = 0
                 self._total_successes += 1
                 self._avg_latency_ms = (
@@ -278,16 +321,19 @@ class LLMService:
                 logger.info(f"LLM greeting reply generated in {elapsed_ms:.0f}ms")
                 return llm_reply.strip(), "llm"
             else:
+                # Response was unsafe or empty — fall back to rule-based greeting
                 self._record_failure("unsafe_or_empty_greeting")
                 logger.warning(f"LLM greeting reply unsafe or empty, falling back. elapsed={elapsed_ms:.0f}ms")
                 return _random.choice(GREETING_FALLBACK_RESPONSES), "rule_based_fallback"
 
         except asyncio.TimeoutError:
+            # LLM took too long to respond — use fallback greeting
             elapsed_ms = (time.time() - start_time) * 1000
             self._record_failure("timeout_greeting")
             logger.warning(f"LLM greeting timeout after {elapsed_ms:.0f}ms, falling back to greeting fallback")
             return _random.choice(GREETING_FALLBACK_RESPONSES), "rule_based_fallback"
         except Exception as e:
+            # Any other error — log and fall back to rule-based greeting
             elapsed_ms = (time.time() - start_time) * 1000
             self._record_failure("error_greeting")
             logger.error(f"LLM greeting error after {elapsed_ms:.0f}ms: {e}")

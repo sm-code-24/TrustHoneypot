@@ -15,11 +15,29 @@ import random
 import logging
 from typing import Dict, List, Optional
 from detector import detector
+from llm import is_greeting_message
 
 logger = logging.getLogger(__name__)
 
 # ─── Engagement Stage Definitions ─────────────────────────────────────────────
+# 
+# Engagement stages track the progression of a scam conversation from initial greeting
+# to deep engagement and intelligence extraction. Each stage has a progress percentage
+# displayed in the frontend monitoring dashboard.
+#
+# Stage Flow:
+# 1. rapport_initialization (2%) - Simple greeting received, no scam indicators yet
+# 2. initial_contact (5%) - First real interaction, scammer introduces themselves
+# 3. rapport_building (15%) - Scammer building trust, making friendly conversation
+# 4. urgency_response (30%) - Scammer applies pressure/threats/urgency
+# 5. scam_confirmed (40%) - Scam pattern definitively identified
+# 6. information_gathering (55%) - Actively asking scammer for their details
+# 7. deep_engagement (70%) - Extended conversation, multiple exchanges
+# 8. intelligence_extraction (85%) - Collecting UPI IDs, phone numbers, bank accounts
+# 9. intelligence_reported (100%) - Callback sent to webhook, mission complete
+#
 ENGAGEMENT_STAGES = {
+    "rapport_initialization": {"label": "Rapport Initialization", "description": "Monitoring conversation, greeting received", "progress": 2},
     "initial_contact":        {"label": "Initial Contact",        "description": "First interaction, establishing persona",   "progress": 5},
     "rapport_building":       {"label": "Building Rapport",       "description": "Gaining trust, showing confusion",          "progress": 15},
     "urgency_response":       {"label": "Responding to Pressure", "description": "Reacting to threats or urgency tactics",    "progress": 30},
@@ -83,6 +101,42 @@ class HoneypotAgent:
         "Sorry beta, I was doing something. Now tell me, what is the matter?",
         "Yes? What is it? I don't understand what you are talking about.",
         "Is this some company call? Tell me clearly what you want.",
+    ]
+    
+    # ─── Greeting Responses ───────────────────────────────────────────────────
+    # Used when scammer sends a simple greeting like "hi", "hello", "good morning"
+    # These responses:
+    # - Are polite and warm (not defensive or suspicious)
+    # - Keep the conversation open for the scammer to reveal their intent
+    # - Don't mention scams, fraud, or verification
+    # - Ask "who is this?" naturally, like a normal person would
+    #
+    # This is Stage 0 (Rapport Initialization) — we're just monitoring at this point.
+    GREETING_RESPONSES = [
+        "Hello. How can I help you?",
+        "Hi. May I know who this is?",
+        "Hello there. What is this regarding?",
+        "Good day. How can I assist you?",
+        "Hi. Could you please tell me what this is about?",
+        "Hello! Yes, who is this?",
+        "Hi! Yes, I'm here. Who is calling?",
+        "Hello! Good day. Who am I speaking to?",
+        "Hey! Yes, tell me. Who is this?",
+        "Hi there! Yes, who is calling?",
+    ]
+    
+    # Hindi/Hinglish greeting responses - same principles as English
+    HINDI_GREETING_RESPONSES = [
+        "Hello ji! Haan bataiye, kaun bol raha hai?",
+        "Namaste ji! Haan bolo, kaun hai?",
+        "Haan ji? Bataiye, kaun bol raha hai?",
+        "Hello! Ji kahiye, kaun sahab?",
+        "Namaste! Haan ji, bolo bolo.",
+        "Haan ji! Kaun hai bhai?",
+        "Hello ji! Haan sun raha hoon, bataiye.",
+        "Ji haan, bolo? Kaun bol raha hai?",
+        "Hello ji! Kaise hain aap? Bataiye.",
+        "Namaste! Ji kahiye, kya baat hai?",
     ]
     
     # Hindi neutral responses (for Hindi/Hinglish messages)
@@ -670,6 +724,7 @@ class HoneypotAgent:
                 "_history_processed_count": 0,  # Track processed history to avoid duplicates
                 "scam_type": None,  # Track the TYPE of scam for context consistency
                 "threat_count": 0,  # Number of actual threat messages received
+                "greeting_stage": False,  # True if last interaction was greeting-only
             }
         return self.session_context[session_id]
     
@@ -838,8 +893,13 @@ class HoneypotAgent:
         
         # ─── RESPONSE SELECTION WITH CONTEXT AWARENESS ───────────────────────
         
+        # 0. GREETING MESSAGES - polite, natural greeting response (must be checked BEFORE short message)
+        if is_greeting_message(scammer_message):
+            context["greeting_stage"] = True
+            pool = self.HINDI_GREETING_RESPONSES if lang == "hi" else self.GREETING_RESPONSES
+        
         # 1. SHORT MESSAGES - follow-up to continue conversation
-        if self._is_short_message(scammer_message) and message_count > 1:
+        elif self._is_short_message(scammer_message) and message_count > 1:
             pool = self.HINDI_SHORT_FOLLOWUP_RESPONSES if lang == "hi" else self.SHORT_FOLLOWUP_RESPONSES
         
         # 2. SCAMMER CONFIRMS after our doubt
@@ -1012,14 +1072,37 @@ class HoneypotAgent:
         """
         Determine the current engagement stage with detailed info.
         
-        Returns dict with: stage, label, description, progress (0-100)
-        Used by API response and frontend stage visualization.
+        Stage determination logic:
+        1. First checks if session is still in greeting-only mode (Stage 0)
+        2. Then checks for completion states (intelligence reported)
+        3. Then checks for active engagement stages based on message count and tactics
+        4. Falls back to initial stages for new conversations
+        
+        The greeting_stage flag is set when we receive a greeting message,
+        and cleared when a non-greeting message arrives. This allows proper
+        transition from rapport_initialization → other stages.
+        
+        Args:
+            session_id: The unique session identifier
+            msg_count: Total message count in conversation
+            scam_confirmed: Whether scam detector has confirmed this is a scam
+            callback_sent: Whether intelligence callback has been sent
+        
+        Returns:
+            dict with: stage (id), label, description, progress (0-100)
+            Used by API response and frontend stage visualization
         """
         context = self._get_context(session_id)
         escalation = context.get("escalation_level", 0)
         intel_requested = context.get("intel_requested", False)
         tactics = context.get("detected_tactics", set())
         
+        # Check if session is still in greeting-only stage
+        # This flag is set by generate_neutral_response() when greeting detected,
+        # and cleared by get_reply() when non-greeting message arrives
+        is_greeting_stage = context.get("greeting_stage", False)
+        
+        # Determine stage based on conversation state
         if callback_sent:
             stage_id = "intelligence_reported"
         elif intel_requested and scam_confirmed and msg_count >= 6:
@@ -1032,6 +1115,9 @@ class HoneypotAgent:
             stage_id = "urgency_response"
         elif scam_confirmed:
             stage_id = "scam_confirmed"
+        elif is_greeting_stage and not scam_confirmed and not tactics:
+            # Stage 0: Just monitoring, only greeting received so far
+            stage_id = "rapport_initialization"
         elif msg_count >= 2:
             stage_id = "rapport_building"
         else:
@@ -1156,6 +1242,14 @@ class HoneypotAgent:
         
         Returns a cautious but engaged, human-like reply without revealing detection status.
         Keeps the conversation open so the scammer stays engaged if it IS a scam.
+        
+        Response Priority:
+        1. Greeting messages → warm, polite greeting replies
+        2. Short/vague messages → follow-up questions
+        3. Other messages → neutral, cautious responses
+        
+        The greeting_stage flag is set here when a greeting is detected,
+        allowing the system to show "Rapport Initialization" stage.
         """
         context = self._get_context(session_id)
         
@@ -1168,9 +1262,15 @@ class HoneypotAgent:
         # Detect language for response selection
         lang = self._detect_language(scammer_message) if scammer_message else "en"
         
-        # Check if this is a short/vague message - respond with follow-up
-        if scammer_message and self._is_short_message(scammer_message):
+        # PRIORITY 1: Check for greeting first - respond warmly, not defensively
+        # This is crucial for Stage 0 (Rapport Initialization) behavior
+        if scammer_message and is_greeting_message(scammer_message):
+            context["greeting_stage"] = True  # Set flag for stage tracking
+            pool = self.HINDI_GREETING_RESPONSES if lang == "hi" else self.GREETING_RESPONSES
+        # PRIORITY 2: Check if this is a short/vague message - respond with follow-up
+        elif scammer_message and self._is_short_message(scammer_message):
             pool = self.HINDI_SHORT_FOLLOWUP_RESPONSES if lang == "hi" else self.SHORT_FOLLOWUP_RESPONSES
+        # PRIORITY 3: Default neutral response for other messages
         else:
             pool = self.HINDI_NEUTRAL_RESPONSES if lang == "hi" else self.NEUTRAL_RESPONSES
         
@@ -1192,16 +1292,33 @@ class HoneypotAgent:
         
         Never exposes detection status.
         Adapts dynamically based on conversation history.
+        
+        Stage Transition Logic:
+        - Greeting messages set greeting_stage = True
+        - Non-greeting messages clear greeting_stage = False
+        - This allows smooth transition from "Rapport Initialization" stage
+          to normal scam detection stages
         """
         context = self._get_context(session_id)
         
-        # Track current scammer message
+        # Track current scammer message in conversation history
         context["conversation_history"].append({"role": "scammer", "text": scammer_message})
+        
+        # Exit greeting stage if current message is NOT a greeting
+        # This enables transition from Stage 0 (Rapport Initialization) 
+        # to normal scam engagement stages when scammer reveals intent
+        if not is_greeting_message(scammer_message):
+            context["greeting_stage"] = False
         
         if is_scam:
             return self.generate_response(session_id, scammer_message, message_count)
         else:
             return self.generate_neutral_response(session_id, scammer_message)
+    
+    def is_in_greeting_stage(self, session_id: str) -> bool:
+        """Check if session is currently in greeting/rapport initialization stage."""
+        context = self._get_context(session_id)
+        return context.get("greeting_stage", False)
     
     def get_current_strategy(self, session_id: str) -> str:
         """Return a human-readable label of the current engagement strategy."""
@@ -1209,6 +1326,8 @@ class HoneypotAgent:
         escalation = context.get("escalation_level", 0)
         last_tactic = context.get("last_tactic", None)
         
+        if context.get("greeting_stage", False):
+            return "greeting_rapport"
         if last_tactic == "digital_arrest":
             return "fearful_compliance_digital_arrest"
         if last_tactic == "courier":

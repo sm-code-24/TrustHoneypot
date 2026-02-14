@@ -81,15 +81,6 @@ export async function fetchCallbacks(limit = 50) {
   return data.callbacks || [];
 }
 
-export async function fetchSystemStatus() {
-  const res = await fetch(`${API_BASE}/system/status`, { headers: headers() });
-  if (!res.ok) {
-    logErr("API", `fetchSystemStatus failed: HTTP ${res.status}`);
-    throw new Error(`API error: ${res.status}`);
-  }
-  return await res.json();
-}
-
 export async function fetchScenarios() {
   const res = await fetch(`${API_BASE}/scenarios`, { headers: headers() });
   if (!res.ok) {
