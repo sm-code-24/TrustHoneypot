@@ -158,6 +158,7 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --app-dir app
 | `GET`  | `/intelligence/registry/{id}` | Yes  | Identifier detail — frequency, confidence, sessions |
 | `GET`  | `/intelligence/patterns`      | Yes  | Pattern correlation with similarity scoring         |
 | `GET`  | `/intelligence/export`        | Yes  | Export registry as styled Excel (.xlsx)             |
+| `POST` | `/intelligence/backfill`      | Yes  | Re-populate registry from existing session data     |
 | `GET`  | `/system/status`              | Yes  | API, LLM, MongoDB status                            |
 
 ### POST `/honeypot` — Request
@@ -185,7 +186,14 @@ uvicorn main:app --host 0.0.0.0 --port 8000 --app-dir app
   "scam_type": "bank_impersonation",
   "scam_stage": "engaged",
   "intelligence_counts": { "upiIds": 0, "phoneNumbers": 1, "bankAccounts": 0 },
-  "callback_sent": false
+  "callback_sent": false,
+  "fraud_type": "KYC PHISHING",
+  "fraud_color": "amber",
+  "detection_reasons": [
+    "Identity verification scam pattern",
+    "Urgency pattern detected"
+  ],
+  "pattern_similarity": 0.0
 }
 ```
 

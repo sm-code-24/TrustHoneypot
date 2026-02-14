@@ -88,6 +88,11 @@ class HoneypotResponse(BaseModel):
     stage_info: Optional[dict] = None  # Detailed stage: {stage, label, description, progress, ...}
     intelligence_counts: Optional[dict] = None
     callback_sent: Optional[bool] = None
+    # v2.1 enrichment
+    fraud_type: Optional[str] = None
+    fraud_color: Optional[str] = None
+    detection_reasons: Optional[List[str]] = None
+    pattern_similarity: Optional[float] = None
 
 
 class SimulationRequest(BaseModel):

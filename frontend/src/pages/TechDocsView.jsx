@@ -458,6 +458,11 @@ export default function TechDocsView() {
                   "Export intelligence registry as styled Excel (.xlsx) workbook",
                 ],
                 [
+                  "POST",
+                  "/intelligence/backfill",
+                  "Re-populate intelligence & pattern registries from existing session data",
+                ],
+                [
                   "GET",
                   "/system/status",
                   "System health — LLM status, DB connection, uptime",
@@ -524,6 +529,10 @@ export default function TechDocsView() {
             {
               title: "Clickable Intelligence",
               desc: "Registry identifiers are clickable — opening a detail modal showing confidence, frequency, recurrence status, associated sessions, and fraud types.",
+            },
+            {
+              title: "Session Persistence",
+              desc: "Chat sessions persist across tab navigation within the dashboard. Conversations are only cleared when starting a new session or refreshing the page.",
             },
           ].map((item) => (
             <div

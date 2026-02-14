@@ -359,6 +359,20 @@ async def process_message(
         # Build response (status, reply, plus enriched metadata for UI)
         stage_info = agent.get_engagement_stage(session_id, msg_count, scam_confirmed, callback_sent)
         
+        # v2.1 enrichment: fraud classification + detection reasoning
+        fraud_type = classify_fraud_type(detection_details.scam_type or "unknown")
+        fraud_color = get_fraud_color(fraud_type)
+        reasoning = generate_detection_reasoning(
+            scam_type=detection_details.scam_type or "unknown",
+            risk_level=detection_details.risk_level or "minimal",
+            confidence=detection_details.confidence,
+            tactics=tactics_list,
+            intelligence_counts=intel_counts,
+            pattern_match_count=correlation.get("match_count", 0),
+            similarity_score=correlation.get("similarity_score", 0.0),
+            recurring=correlation.get("recurring", False),
+        )
+        
         response = HoneypotResponse(
             status="success",
             reply=agent_reply,
@@ -372,6 +386,10 @@ async def process_message(
             stage_info=stage_info,
             intelligence_counts=intel_counts,
             callback_sent=memory.is_callback_sent(session_id),
+            fraud_type=fraud_type,
+            fraud_color=fraud_color,
+            detection_reasons=reasoning.get("reasons", []),
+            pattern_similarity=correlation.get("similarity_score", 0.0),
         )
         
         # Internal logging - detection result, intelligence, notes, callback (not exposed in response)
@@ -696,15 +714,25 @@ async def get_system_status(api_key: str = Depends(verify_api_key)):
 
 @app.get("/intelligence/registry")
 async def get_intelligence_registry(
-    type: Optional[str] = Query(default=None, description="Filter by type: UPI, Phone, Email, Bank, Link"),
+    type: Optional[str] = Query(default=None, description="Filter by type: upi, phone, bank_account, link, email"),
     risk: Optional[str] = Query(default=None, description="Filter by risk level"),
     limit: int = Query(default=100, le=500),
     api_key: str = Depends(verify_api_key),
 ):
     """Get intelligence registry entries with optional filters."""
-    entries = intel_registry.get_registry(id_type=type, risk_level=risk, limit=limit)
+    db_type = _TYPE_FILTER_MAP.get(type) if type else None
+    entries = intel_registry.get_registry(id_type=db_type, risk_level=risk, limit=limit)
     stats = intel_registry.get_registry_stats()
-    return {"entries": entries, "stats": stats}
+    identifiers = [_normalize_registry_entry(e) for e in entries]
+    return {
+        "identifiers": identifiers,
+        "stats": {
+            "total_identifiers": stats.get("total", 0),
+            "by_type": stats.get("by_type", {}),
+            "by_risk": stats.get("by_risk", {}),
+            "recurring_count": sum(1 for i in identifiers if i["is_recurring"]),
+        },
+    }
 
 
 @app.get("/intelligence/registry/{identifier}")
@@ -716,14 +744,74 @@ async def get_identifier_detail(
     detail = intel_registry.get_identifier_detail(identifier)
     if not detail:
         raise HTTPException(status_code=404, detail="Identifier not found")
-    return detail
+    occ = detail.get("occurrences", 1)
+    sessions = detail.get("sessions", [])
+    # Lookup fraud types from associated sessions
+    fraud_types = set()
+    for sid in sessions[:20]:
+        s = db_service.get_session_summary(sid)
+        if s:
+            fraud_types.add(classify_fraud_type(s.get("scamType", "unknown")))
+    return {
+        "identifier": detail.get("value", identifier),
+        "masked_value": detail.get("masked", identifier),
+        "type": _TYPE_DISPLAY_MAP.get(detail.get("type", ""), detail.get("type", "").lower()),
+        "risk_level": detail.get("riskLevel", ""),
+        "confidence": detail.get("confidence", 0),
+        "frequency": occ,
+        "is_recurring": occ > 1,
+        "first_seen": detail.get("firstSeen", ""),
+        "last_seen": detail.get("lastSeen", ""),
+        "associated_sessions": sessions,
+        "fraud_types": sorted(fraud_types),
+    }
+
+
+# Type mappings for intelligence registry normalization
+_TYPE_FILTER_MAP = {"upi": "UPI", "phone": "Phone", "bank_account": "Bank", "link": "Link", "email": "Email"}
+_TYPE_DISPLAY_MAP = {"UPI": "upi", "Phone": "phone", "Bank": "bank_account", "Link": "link", "Email": "email"}
+
+
+def _normalize_registry_entry(e: dict) -> dict:
+    """Normalize a registry entry from DB camelCase to frontend snake_case."""
+    occ = e.get("occurrences", 1)
+    return {
+        "identifier": e.get("value", ""),
+        "masked_value": e.get("masked", e.get("value", "")),
+        "type": _TYPE_DISPLAY_MAP.get(e.get("type", ""), e.get("type", "").lower()),
+        "risk_level": e.get("riskLevel", ""),
+        "confidence": e.get("confidence", 0),
+        "frequency": occ,
+        "is_recurring": occ > 1,
+        "first_seen": e.get("firstSeen", ""),
+        "last_seen": e.get("lastSeen", ""),
+        "sessions": e.get("sessions", []),
+    }
 
 
 @app.get("/intelligence/patterns")
 async def get_pattern_correlation(api_key: str = Depends(verify_api_key)):
     """Get pattern correlation statistics."""
-    stats = pattern_engine.get_pattern_stats()
-    return stats
+    raw = pattern_engine.get_pattern_stats()
+    patterns = []
+    for p in raw.get("top_patterns", []):
+        cnt = p.get("count", 0)
+        patterns.append({
+            "scam_type": p.get("scam_type", "unknown"),
+            "occurrence_count": cnt,
+            "similarity_score": 1.0 if cnt > 1 else 0.0,
+            "hash": p.get("hash", ""),
+            "tactics": p.get("tactics", []),
+        })
+    return {
+        "patterns": patterns,
+        "stats": {
+            "total_patterns": raw.get("total_patterns", 0),
+            "recurring_patterns": raw.get("recurring_count", 0),
+            "avg_similarity": raw.get("avg_similarity", 0.0),
+            "unique_scam_types": raw.get("unique_scam_types", 0),
+        },
+    }
 
 
 @app.get("/sessions/{session_id}/analysis")
@@ -803,7 +891,8 @@ async def export_intelligence_excel(
     except ImportError:
         raise HTTPException(status_code=500, detail="openpyxl not installed")
     
-    entries = intel_registry.get_registry(id_type=type, risk_level=risk, limit=5000)
+    db_type = _TYPE_FILTER_MAP.get(type) if type else None
+    entries = intel_registry.get_registry(id_type=db_type, risk_level=risk, limit=5000)
     
     # Apply date filtering
     if date_from or date_to:
@@ -883,6 +972,56 @@ async def export_intelligence_excel(
         media_type="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         headers={"Content-Disposition": f"attachment; filename={filename}"},
     )
+
+
+@app.post("/intelligence/backfill")
+async def backfill_intelligence(api_key: str = Depends(verify_api_key)):
+    """Backfill intelligence registry + pattern registry from existing session summaries.
+    
+    Useful after fixing the DB boolean check bug that prevented registration.
+    """
+    if not db_service.enabled:
+        raise HTTPException(status_code=503, detail="Database not available")
+    
+    summaries = db_service.get_session_summaries(limit=500)
+    backfilled = 0
+    for s in summaries:
+        intel = s.get("intelligence", {})
+        if not intel:
+            continue
+        session_id = s.get("sessionId", "")
+        risk_level = s.get("riskLevel", "minimal")
+        confidence = s.get("confidence", 0.0)
+        scam_type = s.get("scamType", "unknown")
+        tactics = s.get("tactics", [])
+        
+        # Register identifiers
+        intel_registry.register_session_intelligence(
+            session_id=session_id,
+            intelligence=intel,
+            risk_level=risk_level,
+            confidence=confidence,
+        )
+        # Register pattern
+        all_ids = (
+            intel.get("upiIds", []) +
+            intel.get("phoneNumbers", []) +
+            intel.get("bankAccounts", []) +
+            intel.get("phishingLinks", []) +
+            intel.get("emails", [])
+        )
+        pattern_engine.register_pattern(
+            session_id=session_id,
+            scam_type=scam_type,
+            tactics=tactics,
+            identifiers=all_ids,
+            risk_level=risk_level,
+            confidence=confidence,
+        )
+        backfilled += 1
+    
+    logger.info(f"Backfilled intelligence from {backfilled} sessions")
+    return {"backfilled": backfilled, "message": f"Processed {backfilled} sessions"}
 
 
 if __name__ == "__main__":

@@ -250,7 +250,7 @@ export default function AboutView() {
             { value: "8", label: "Intel Extractors" },
             { value: "260+", label: "Response Templates" },
             { value: "v2.1", label: "Current Version" },
-            { value: "3", label: "DB Collections" },
+            { value: "4", label: "DB Collections" },
           ].map((stat) => (
             <div key={stat.label}>
               <div className="text-2xl md:text-3xl font-extrabold text-gradient">

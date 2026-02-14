@@ -439,8 +439,9 @@ class PatternCorrelationService:
     def get_pattern_stats(self) -> dict:
         """Get pattern frequency statistics."""
         coll = self._get_collection()
+        empty = {"total_patterns": 0, "top_patterns": [], "recurring_count": 0, "avg_similarity": 0.0, "unique_scam_types": 0}
         if coll is None:
-            return {"total_patterns": 0, "top_patterns": [], "recurring_count": 0}
+            return empty
         try:
             pipeline = [
                 {"$group": {
@@ -455,6 +456,8 @@ class PatternCorrelationService:
             top = list(coll.aggregate(pipeline))
             recurring = sum(1 for p in top if p["count"] > 1)
             total = coll.count_documents({})
+            scam_types = set(p.get("scamType", "unknown") for p in top)
+            avg_sim = round(recurring / max(len(top), 1), 2) if top else 0.0
             return {
                 "total_patterns": total,
                 "top_patterns": [
@@ -467,7 +470,9 @@ class PatternCorrelationService:
                     for p in top
                 ],
                 "recurring_count": recurring,
+                "avg_similarity": avg_sim,
+                "unique_scam_types": len(scam_types),
             }
         except Exception as e:
             logger.error(f"Failed to get pattern stats: {e}")
-            return {"total_patterns": 0, "top_patterns": [], "recurring_count": 0}
+            return empty

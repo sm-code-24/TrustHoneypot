@@ -18,11 +18,15 @@ import {
   Zap,
   Target,
   TrendingUp,
+  Plus,
 } from "lucide-react";
 
 /* ── tiny id helper ── */
 const uid = () =>
   crypto.randomUUID?.() ?? Math.random().toString(36).slice(2, 10);
+
+/* ── module-level state (survives tab navigation, clears on page refresh) ── */
+let _persisted = null;
 
 /* ── animated mode slider ── */
 function ModeSlider({ mode, onChange }) {
@@ -343,19 +347,26 @@ function StageTimeline({ stages }) {
 }
 
 export default function SessionView() {
-  const [sessionId, setSessionId] = useState(uid());
-  const [messages, setMessages] = useState([]);
+  const [sessionId, setSessionId] = useState(
+    () => _persisted?.sessionId || uid(),
+  );
+  const [messages, setMessages] = useState(() => _persisted?.messages || []);
   const [input, setInput] = useState("");
   const [loading, setLoading] = useState(false);
-  const [mode, setMode] = useState("rule_based");
-  const [analysis, setAnalysis] = useState(null);
+  const [mode, setMode] = useState(() => _persisted?.mode || "rule_based");
+  const [analysis, setAnalysis] = useState(() => _persisted?.analysis || null);
   const [showPanel, setShowPanel] = useState(false);
   const chatEnd = useRef(null);
 
   // Auto-simulation state
   const [scenarios, setScenarios] = useState([]);
   const [simulating, setSimulating] = useState(false);
-  const [simStages, setSimStages] = useState([]);
+  const [simStages, setSimStages] = useState(() => _persisted?.simStages || []);
+
+  // Persist state across tab navigation
+  useEffect(() => {
+    _persisted = { sessionId, messages, analysis, mode, simStages };
+  }, [sessionId, messages, analysis, mode, simStages]);
 
   const scrollToBottom = useCallback(() => {
     chatEnd.current?.scrollIntoView({ behavior: "smooth" });
@@ -480,6 +491,7 @@ export default function SessionView() {
   };
 
   const handleNewSession = () => {
+    _persisted = null;
     setSessionId(uid());
     setMessages([]);
     setAnalysis(null);
@@ -523,10 +535,14 @@ export default function SessionView() {
             />
             <button
               onClick={handleNewSession}
-              className="p-2 rounded-lg transition-colors"
-              style={{ color: "var(--text-tertiary)" }}
-              title="New session">
-              <RefreshCw size={15} />
+              className="flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-1.5 rounded-lg text-[11px] sm:text-xs font-medium transition-all border hover:bg-blue-500/5"
+              style={{
+                color: "var(--text-tertiary)",
+                borderColor: "var(--border-primary)",
+              }}
+              title="Start a new session">
+              <Plus size={12} />
+              <span className="hidden sm:inline">New Session</span>
             </button>
             <button
               onClick={() => setShowPanel((p) => !p)}
