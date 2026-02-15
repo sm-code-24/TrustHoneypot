@@ -1,4 +1,4 @@
-# TrustHoneypot v2.1 — Scam Intelligence Command Center
+# TrustHoneypot v2.2 — Scam Intelligence Command Center
 
 > **Scam Intelligence Platform — Solving Real-World Fraud**  
 > Team: **200 Hustlers** (Shailav · Bhupendra · Shivam · Gungun)
@@ -68,6 +68,17 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 | **Live Callbacks**            | Automatic government portal reporting when sufficient intel gathered                         |
 | **Dark / Light Theme**        | Full dark + light theme system with CSS custom properties & glassmorphism                    |
 | **Production Ready**          | Rate limiting, request timing, session TTL cleanup, configurable CORS                        |
+
+### v2.2 — Production Hardening Pass
+
+- **Intent Classifier** — Lightweight NLP module with 12 intent categories feeding risk increments directly into the scoring pipeline
+- **Graduated Thresholds** — 7-level threshold engine (Monitoring→Reasoning→Storage→Pattern→Scam→High→Critical) replacing the single-threshold approach
+- **Conditional Intelligence** — Detection reasoning, pattern similarity, and intel registry storage only activate when risk warrants it
+- **Anti-Repetition LLM** — System prompt injects recent conversation turns to prevent repetitive rephrasing
+- **Stage-Aware Tone** — LLM adapts tone to engagement stage (greeting→confusion→fear→compliance)
+- **Fraud Badge Guard** — Only confirmed scams show fraud type badges; low-risk sessions display "MONITORING"
+- **Extracted Intelligence Display** — Session analysis panel shows actual UPI IDs, phone numbers, etc. — not just counts
+- **Session Timestamps** — Intelligence view shows formatted session times
 
 ---
 
@@ -227,7 +238,8 @@ trusthoneypot/
 │   ├── agent.py         # Honeypot agent (15+ response pools)
 │   ├── detector.py      # 5-layer scam detection engine
 │   ├── extractor.py     # Intelligence extraction (8 types)
-│   ├── intelligence.py  # Intelligence registry + pattern correlation (v2.1)
+│   ├── intelligence.py  # Intelligence registry + pattern correlation (v2.2)
+│   ├── intent_classifier.py # Lightweight NLP intent classifier (v2.2)
 │   ├── llm.py           # Groq Llama 3.3 70B integration (httpx)
 │   ├── db.py            # MongoDB persistence + indexes
 │   ├── memory.py        # In-memory session state

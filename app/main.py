@@ -1,5 +1,5 @@
 """
-Agentic Honey-Pot API v2.1.0
+Agentic Honey-Pot API v2.2.0
 Scam Intelligence Platform — Problem Statement 2
 
 This is the main entry point for the honeypot system. It receives suspected
@@ -69,7 +69,7 @@ logger = logging.getLogger("trusthoneypot")
 app = FastAPI(
     title="Agentic Honey-Pot API",
     description="Scam Detection & Intelligence Extraction Platform",
-    version="2.1.0",
+    version="2.2.0",
     docs_url="/docs" if os.getenv("ENVIRONMENT", "development") != "production" else None,
     redoc_url=None,
 )
@@ -184,7 +184,7 @@ async def health_check():
     return {
         "status": "online",
         "service": "Agentic Honey-Pot API",
-        "version": "2.1.0",
+        "version": "2.2.0",
         "languages": ["en", "hi"],
     }
 
@@ -269,11 +269,15 @@ async def process_message(
                 # PATH 2: Normal scam engagement
                 # Rephrase the rule-based reply via LLM for more natural language
                 strategy = agent.get_current_strategy(session_id)
+                # v2.2: pass recent turns for anti-repetition
+                ctx = agent._get_context(session_id)
+                recent_turns = ctx.get("conversation_history", [])[-6:]
                 try:
                     llm_reply, llm_source = await llm_service.rephrase_reply(
                         strategy=strategy,
                         rule_reply=agent_reply,
-                        scammer_message=current_message
+                        scammer_message=current_message,
+                        recent_turns=recent_turns,
                     )
                     agent_reply = llm_reply
                     reply_source = llm_source
@@ -361,15 +365,16 @@ async def process_message(
             fraud_type=fraud_label,
         )
         
-        # Register intelligence in the registry (v2.1)
-        intel_registry.register_session_intelligence(
-            session_id=session_id,
-            intelligence=intelligence,
-            risk_level=detection_details.risk_level or "minimal",
-            confidence=detection_details.confidence,
-        )
+        # Register intelligence in the registry (v2.2: conditional on STORAGE_THRESHOLD)
+        if risk_score >= detector.STORAGE_THRESHOLD:
+            intel_registry.register_session_intelligence(
+                session_id=session_id,
+                intelligence=intelligence,
+                risk_level=detection_details.risk_level or "minimal",
+                confidence=detection_details.confidence,
+            )
         
-        # Register pattern for correlation (v2.1)
+        # Register pattern for correlation (v2.2: conditional on PATTERN_THRESHOLD)
         all_identifiers = (
             intelligence.get("upiIds", []) +
             intelligence.get("phoneNumbers", []) +
@@ -377,14 +382,17 @@ async def process_message(
             intelligence.get("phishingLinks", []) +
             intelligence.get("emails", [])
         )
-        correlation = pattern_engine.register_pattern(
-            session_id=session_id,
-            scam_type=detection_details.scam_type or "unknown",
-            tactics=tactics_list,
-            identifiers=all_identifiers,
-            risk_level=detection_details.risk_level or "minimal",
-            confidence=detection_details.confidence,
-        )
+        if risk_score >= detector.PATTERN_THRESHOLD:
+            correlation = pattern_engine.register_pattern(
+                session_id=session_id,
+                scam_type=detection_details.scam_type or "unknown",
+                tactics=tactics_list,
+                identifiers=all_identifiers,
+                risk_level=detection_details.risk_level or "minimal",
+                confidence=detection_details.confidence,
+            )
+        else:
+            correlation = {"match_count": 0, "recurring": False, "similarity_score": 0.0}
         
         # Build response (status, reply, plus enriched metadata for UI)
         stage_info = agent.get_engagement_stage(session_id, msg_count, scam_confirmed, callback_sent)
@@ -402,7 +410,7 @@ async def process_message(
         resp_confidence = 0.0 if is_greeting_stage else detection_details.confidence
         resp_scam_type = "unknown" if is_greeting_stage else (detection_details.scam_type or "unknown")
         
-        # v2.1 enrichment: fraud classification + detection reasoning
+        # v2.2 enrichment: fraud classification + conditional detection reasoning
         fraud_type = classify_fraud_type(resp_scam_type)
         fraud_color = get_fraud_color(fraud_type)
         reasoning = generate_detection_reasoning(
@@ -414,7 +422,12 @@ async def process_message(
             pattern_match_count=correlation.get("match_count", 0),
             similarity_score=correlation.get("similarity_score", 0.0),
             recurring=correlation.get("recurring", False),
+            risk_score=risk_score,
         )
+        
+        # v2.2: Conditional visibility — only expose details when risk warrants it
+        resp_detection_reasons = reasoning.get("reasons", []) if risk_score >= detector.REASONING_THRESHOLD else []
+        resp_pattern_similarity = correlation.get("similarity_score", 0.0) if risk_score >= detector.PATTERN_THRESHOLD else 0.0
         
         response = HoneypotResponse(
             status="success",
@@ -431,8 +444,9 @@ async def process_message(
             callback_sent=memory.is_callback_sent(session_id),
             fraud_type=fraud_type,
             fraud_color=fraud_color,
-            detection_reasons=reasoning.get("reasons", []),
-            pattern_similarity=correlation.get("similarity_score", 0.0),
+            detection_reasons=resp_detection_reasons,
+            pattern_similarity=resp_pattern_similarity,
+            intelligence=intelligence,
         )
         
         # Internal logging - detection result, intelligence, notes, callback (not exposed in response)
@@ -582,11 +596,15 @@ async def run_simulation(
             else:
                 # Normal scam engagement: rephrase rule-based reply via LLM
                 strategy = agent.get_current_strategy(session_id)
+                # v2.2: pass recent turns for anti-repetition
+                ctx = agent._get_context(session_id)
+                recent_turns = ctx.get("conversation_history", [])[-6:]
                 try:
                     llm_reply, llm_source = await llm_service.rephrase_reply(
                         strategy=strategy,
                         rule_reply=agent_reply,
-                        scammer_message=message_text
+                        scammer_message=message_text,
+                        recent_turns=recent_turns,
                     )
                     agent_reply = llm_reply
                     reply_source = llm_source
@@ -691,6 +709,12 @@ async def get_sessions(
     normalized = []
     for s in summaries:
         scam_type = s.get("scamType", "unknown")
+        # v2.2: include timestamp for session time column
+        ts = s.get("timestamp")
+        if ts and hasattr(ts, 'isoformat'):
+            ts = ts.isoformat()
+        if isinstance(ts, str) and not ts.endswith('Z') and '+' not in ts:
+            ts = ts + 'Z'
         normalized.append({
             "session_id": s.get("sessionId", ""),
             "scam_type": scam_type,
@@ -704,6 +728,7 @@ async def get_sessions(
             "callback_sent": s.get("callbackSent", False),
             "response_mode": s.get("responseMode", "rule_based"),
             "tactics": s.get("tactics", []),
+            "timestamp": ts,
         })
     # Also include in-memory sessions not yet in DB
     for sid, session in memory.sessions.items():
@@ -891,7 +916,7 @@ async def get_session_analysis(
     session_id: str,
     api_key: str = Depends(verify_api_key),
 ):
-    """Get enhanced session analysis with detection reasoning (v2.1)."""
+    """Get enhanced session analysis with detection reasoning (v2.2)."""
     summary = db_service.get_session_summary(session_id)
     det = detector.get_detection_details(session_id)
     intel = extractor.get_intelligence_summary(session_id)
@@ -928,6 +953,7 @@ async def get_session_analysis(
         pattern_match_count=correlation_info["match_count"],
         similarity_score=correlation_info["similarity_score"],
         recurring=correlation_info["recurring"],
+        risk_score=getattr(det, "total_score", 0),
     )
     
     return {
@@ -942,6 +968,7 @@ async def get_session_analysis(
         "intelligenceCounts": intel,
         "reasoning": reasoning,
         "correlation": correlation_info,
+        "intelligence": extractor.extract("", session_id) if session_id in extractor.session_data else {},
     }
 
 

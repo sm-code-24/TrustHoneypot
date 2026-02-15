@@ -83,26 +83,26 @@ class HoneypotAgent:
     ]
     
     # Neutral responses for non-scam / uncertain cases
-    # These should keep the conversation OPEN, not dismiss the caller.
-    # Even for uncertain messages, we want to stay engaged.
-    # Persona: confused, polite, slightly hard-of-hearing elderly person.
+    # v2.2: Improved to sound natural, contextual, and NOT vague or suspicious.
+    # These should keep the conversation OPEN without sounding like a bot.
+    # Persona: polite, slightly hard-of-hearing elderly person who genuinely doesn't understand.
     NEUTRAL_RESPONSES = [
-        "Hmm, I'm sorry I didn't quite follow. Can you say that again please?",
-        "Oh? I'm not sure I understood that properly. Could you explain again?",
-        "Sorry beta, my hearing is not so good. What were you saying?",
-        "I see... but I'm a little confused. Can you tell me more slowly?",
-        "Hmm, I didn't catch that properly. Please go on, I'm listening.",
-        "Oh okay. I'm trying to understand. Can you explain from the beginning?",
-        "Sorry, I was distracted for a moment. What did you say just now?",
-        "Yes yes, I'm here. But I didn't fully understand. Can you repeat?",
-        "Hmm one moment... my mind is slow today. What was that about?",
-        "I see. I'm not sure what you mean though. Can you tell me a bit more?",
-        "Oh! Okay okay. But help me understand — what exactly is happening?",
-        "Sorry, I'm a bit confused by all this. Please explain simply.",
-        "Hmm, that's interesting. But I'm not sure I follow. Go on?",
-        "Wait, I'm listening. Just say it again slowly for me please.",
-        "Okay okay, don't worry. Just tell me everything from the start.",
-        "Oh? Really? I didn't know about this. Please tell me more.",
+        "Oh, I see. I didn't quite catch that. Could you say it once more?",
+        "Hmm, I'm trying to understand. Can you explain again slowly?",
+        "Sorry, my hearing aid is acting up. What were you saying exactly?",
+        "One second beta, let me sit down properly. Okay, now tell me again.",
+        "I see... that's interesting. But what does this have to do with me?",
+        "Oh okay. I was watching my serial. What is this regarding?",
+        "Hmm, I missed that. Was making tea. Please repeat, I'm listening now.",
+        "I'm not sure I follow. Can you start from the beginning?",
+        "Wait, let me write this down. My memory is not what it used to be.",
+        "Sorry beta, I was doing my evening walk. Tell me, what is it about?",
+        "Oh really? That's new to me. Can you explain more clearly?",
+        "Hmm, one minute. My grandson was showing me something on phone. Yes, go on.",
+        "I see. But honestly I'm a bit confused. What exactly happened?",
+        "Oh? I didn't know about this. Tell me everything from the start please.",
+        "Hold on, my neighbour was at the door. Okay, I'm back. What were you saying?",
+        "Hmm ji, I'm here. But I didn't fully understand. Can you repeat?",
     ]
     
     # ─── Greeting Responses ───────────────────────────────────────────────────
@@ -679,6 +679,127 @@ class HoneypotAgent:
         "Sir phir se check karo. Mera naam bahut common hai. 1000 log honge same naam ke!",
     ]
 
+    # ─── Job / Money-Making Scam Responses ────────────────────────────────────
+    # Used when scammer offers jobs, work-from-home, earning opportunities.
+    # Our persona: EXCITED elderly person who desperately wants extra income.
+    # The key is showing INTEREST to keep them talking and extracting intel.
+    # DO NOT stall or deflect - show genuine curiosity about the "opportunity".
+    JOB_MONEY_RESPONSES = [
+        "Really? Job from home? That sounds wonderful! How much can I earn beta?",
+        "5000 per day?! That is more than my pension! Please tell me more!",
+        "Oh my god, this is exactly what I was looking for! My pension is not enough these days.",
+        "My grandson was also looking for work. Can he also join? Two people, double income!",
+        "Work from home? Perfect for me! My knees are bad and I can't travel much. What do I have to do?",
+        "This is amazing! I was just complaining to my wife that money is tight. Tell me everything!",
+        "How do I start beta? I have a phone and some free time. What are the steps?",
+        "Which company is this? My nephew works in IT also. Is it similar type of work?",
+        "Daily income? That would help so much with my medical bills. Please explain the full process!",
+        "I am very interested! But I am not very good with computers. Is that okay?",
+        "Job opening? Oh wonderful! I was a school teacher before retirement. What kind of work?",
+        "Earning from home sounds too good! What skills do I need? I can type slowly on phone.",
+        "Please beta, tell me all the details. I want to start immediately if possible!",
+        "My wife will be so happy if I start earning again! What is the company name?",
+        "How much time per day? I have whole day free after morning walk and temple.",
+        "This sounds genuine! My neighbor's son also does online work. How do I register?",
+        "5k per day means 1.5 lakh per month! That is officer level salary! Really possible?",
+        "I'm ready beta! Just tell me step by step what to do. I will follow everything.",
+    ]
+    
+    HINDI_JOB_MONEY_RESPONSES = [
+        "Sach mein? Ghar baithe kaam? Ye toh bahut achhi baat hai! Kitna milega beta?",
+        "5000 roz?! Ye toh meri pension se bhi zyada hai! Batao batao, kya karna hai!",
+        "Arey wah! Main toh pension pe dependent hoon. Extra kamai ho jaye toh bada aaram milega!",
+        "Mera pota bhi kaam dhundh raha hai. Wo bhi kar sakta hai? Dono log karenge!",
+        "Ghar baithe kaam? Mere ghutne mein dard rehta hai, travel nahi hota. Bilkul perfect hai!",
+        "Ye toh bahut achhi opportunity hai! Abhi wife se keh raha tha paisa kam pad raha hai. Sab bata do!",
+        "Kaise shuru karun beta? Mere paas phone hai aur time bhi hai. Steps bata do!",
+        "Kaun si company hai? Mera bhatija bhi IT mein kaam karta hai. Waisa hi kaam hai kya?",
+        "Daily income? Medical bills mein kaafi help hogi. Poora process samjhao na please!",
+        "Main bahut interested hoon! Lekin computer mein utna expert nahi hoon. Chalega na?",
+        "Naukri? Arey wah! Main retired school teacher hoon. Kaisa kaam hai ye?",
+        "Ghar baithe kamai? Itna achha! Kya skills chahiye? Main phone pe typing kar sakta hoon.",
+        "Please beta, sab detail batao. Abhi start karna chahta hoon agar ho sake toh!",
+        "Wife bahut khush hogi agar main phir se kamane lagunga! Company ka kya naam hai?",
+        "Din mein kitna time dena hoga? Mere paas pura din free hai morning walk ke baad.",
+        "Ye toh genuine lag raha hai! Mere padosi ka beta bhi online kaam karta hai. Registration kaise hoga?",
+    ]
+    
+    # ─── Link / URL Confusion Responses ───────────────────────────────────────
+    # When scammer shares a link to click. Our persona: tech-confused elderly
+    # who WANTS to click but doesn't know how. This keeps them explaining 
+    # (wasting time) and we record the phishing link as intel.
+    LINK_CLICK_RESPONSES = [
+        "Link? Where do I click? I don't see any blue colored text on my phone.",
+        "My grandson usually helps me open links. Which app does it open in?",
+        "I tried clicking but nothing is happening. Is my phone too old for this?",
+        "It's asking me to open in Chrome or something. Which one should I choose?",
+        "The link opened but it shows some error. Can you send it again on WhatsApp?",
+        "Beta, I don't know how to copy-paste link. Can you explain step by step?",
+        "It opened some page but I cannot read the small text. What does it say?",
+        "My phone is showing a warning - 'this site may be harmful'. Is that normal?",
+        "I pressed on it but it's loading very slowly. My internet is 2G only in this area.",
+        "Which button do I press after opening? There are so many things on the screen!",
+        "Website opened but it's asking for my name and phone number. Should I fill it?",
+        "Can you send the link as SMS instead? WhatsApp links I find difficult to open.",
+        "It's asking me to download some app first. Is it safe? My phone has less storage.",
+        "I accidentally closed it! Can you send the link one more time please?",
+        "My phone browser is showing the link but page is blank. What to do now?",
+        "Okay I will try again. But wait - what am I supposed to do after the page opens?",
+    ]
+    
+    HINDI_LINK_CLICK_RESPONSES = [
+        "Link? Kahan click karun? Mujhe toh koi blue text nahi dikh raha phone pe.",
+        "Mera pota help karta hai ye sab. Kaun se app mein khulega ye?",
+        "Maine click kiya lekin kuch nahi ho raha. Mera phone purana hai, isliye?",
+        "Chrome mein open ho raha hai kuch. Kaun sa choose karun?",
+        "Link khula lekin error aa raha hai. WhatsApp pe dobara bhej do na.",
+        "Beta, mujhe copy-paste nahi aata. Step by step samjhao na.",
+        "Page khula lekin itna chhota likha hai, padh nahi pa raha. Kya likha hai usme?",
+        "Phone warning de raha hai - 'ye site harmful ho sakti hai'. Ye normal hai kya?",
+        "Click kiya lekin bahut slow load ho raha hai. Yahan 2G network hai sirf.",
+        "Kaunsa button dabaun? Screen pe itna sab dikha raha hai, samajh nahi aa raha!",
+        "Website khuli lekin naam aur phone number maang rahi hai. Bharun kya?",
+        "SMS pe link bhej do na. WhatsApp ke links mujhe mushkil lagte hain.",
+        "Koi app download karne bol raha hai. Safe hai? Phone mein jagah kam hai.",
+        "Arey galti se band ho gaya! Ek baar aur bhejo link please.",
+    ]
+    
+    # ─── Scammer Frustration / Re-engagement Responses ────────────────────────
+    # When scammer gets frustrated ("are u fooling me", "stop wasting time").
+    # Our persona: apologetic, reassures interest, begs them not to leave.
+    # This is CRITICAL for keeping the conversation alive after stalling too much.
+    SCAMMER_FRUSTRATION_RESPONSES = [
+        "No no no, please don't be angry beta! I am genuinely interested! Tell me again.",
+        "Sorry sorry! I was not fooling you. I am just old and slow. Please continue!",
+        "Please sir, don't go! I really need this. My pension is not enough. Tell me what to do!",
+        "I apologize! I was just busy with household work. Now I am 100% focused. Go ahead!",
+        "Arey no! I am very serious beta! Please don't disconnect. I was just confused earlier.",
+        "Sorry for the delay! You know how it is at my age. But I am very interested, please continue.",
+        "Don't be upset with me. I am really trying to understand. Can you explain once more slowly?",
+        "No I am not joking! I really want to do this. Please give me one more chance to follow properly.",
+        "Please beta, forgive me. I get distracted easily at this age. Now tell me, what were you saying?",
+        "I am not wasting your time! I genuinely want to participate. I was just taking my medicine.",
+        "Sir please don't be angry! My hearing aid was not working properly. Now it's fine. Go ahead!",
+        "Sorry sorry! I know I keep getting interrupted. But this time I am sitting alone, ready to listen.",
+        "Please have patience with me sir. I am 65 years old. But I am very serious about this opportunity.",
+        "No no, I am listening carefully! I was just writing down the details. Please don't hang up!",
+    ]
+    
+    HINDI_SCAMMER_FRUSTRATION_RESPONSES = [
+        "Nahi nahi, gussa mat ho beta! Main sach mein interested hoon! Phir se batao na.",
+        "Sorry sorry! Main mazaak nahi kar raha. Main bas slow hoon. Please continue!",
+        "Please sir, mat jao! Mujhe sach mein zaroorat hai. Pension kam padti hai. Batao kya karun!",
+        "Maafi chahta hoon! Ghar ka kaam ho raha tha. Ab main 100% dhyan de raha hoon. Aage bolo!",
+        "Arey nahi! Main bahut serious hoon beta! Please disconnect mat karo. Pehle confuse tha bas.",
+        "Delay ke liye sorry! Umar ka asar hai. Lekin main interested hoon, please jaari rakho.",
+        "Naraz mat ho mujhse. Main sach mein samajhne ki koshish kar raha hoon. Ek baar aur bata do.",
+        "Mazaak nahi kar raha! Sach mein karna chahta hoon ye. Ek mauka aur do samajhne ka.",
+        "Please beta, maaf kar do. Is umar mein dhyan bhatakta hai. Ab batao, kya keh rahe the?",
+        "Time waste nahi kar raha! Sach mein participate karna chahta hoon. Dawai le raha tha bas.",
+        "Sir please gussa mat ho! Hearing aid theek nahi chal rahi thi. Ab sab theek hai. Bolo!",
+        "Sorry sorry! Main jaanta hoon baar baar distract ho raha hoon. Ab akela hoon, suno!",
+    ]
+
     # ─── Hesitation Prefixes (for realism) ────────────────────────────────────
     HESITATION_EN = [
         "Hmm...", "Uh...", "Actually...", "Well...", "Let me think...",
@@ -825,7 +946,10 @@ class HoneypotAgent:
             tactics.append("verification")
         if any(w in msg for w in ["refund", "prize", "won", "reward", "cashback", "lottery", "winner", "inaam", "inam", "lottery jeete", "paisa wapas"]):
             tactics.append("payment_lure")
-        if any(w in msg for w in ["police", "legal", "arrest", "court", "case", "warrant", "cbi", "ed", "jail", "giraftar", "giraftaar", "pakad", "muqadma", "kanuni", "kanooni", "thana"]):
+        if any(w in msg for w in ["police", "legal", "arrest", "court", "case", "warrant", "cbi", "jail", "giraftar", "giraftaar", "pakad", "muqadma", "kanuni", "kanooni", "thana"]):
+            tactics.append("threat")
+        # "ed" needs word boundary check to avoid matching "called", "registered" etc.
+        if re.search(r'\bed\b', msg) and any(w in msg for w in ["raid", "notice", "investigation", "case", "arrest", "department", "enforcement"]):
             tactics.append("threat")
         if any(w in msg for w in ["upi", "transfer", "pay", "send", "bhim", "paytm", "phonepe", "gpay", "paisa bhejo", "paise bhejo", "paise transfer", "raqam bhejo"]):
             tactics.append("payment_request")
@@ -846,6 +970,56 @@ class HoneypotAgent:
         # Security/alert keywords
         if any(w in msg for w in ["security", "alert", "warning", "flagged", "suspicious", "compromised", "hacked", "breach"]):
             tactics.append("security_alert")
+        # Job/money/investment offer
+        if any(w in msg for w in [
+            "job", "work from home", "earn", "earning", "income", "salary", 
+            "vacancy", "opening", "hiring", "hired", "company", "position",
+            "part time", "full time", "freelance", "online work", "typing work",
+            "data entry", "5k", "10k", "15k", "20k", "per day", "daily income",
+            "monthly income", "guaranteed income", "lakhs", "easy money",
+            "simple work", "task", "assignment", "demo", "training",
+            # Hindi job terms
+            "naukri", "kaam", "kamai", "kamao", "kamaiye", "rozgar",
+            "ghar baithe", "tankhwah", "vetan", "pagar", "company mein",
+            "kaam milega", "kaam hai", "ghar se kaam", "paisa kamao",
+            "rozana", "mahina", "hafte",
+        ]):
+            tactics.append("job_offer")
+        
+        # Investment/trading lure
+        if any(w in msg for w in [
+            "invest", "investment", "trading", "profit", "stock", "share market",
+            "mutual fund", "crypto", "bitcoin", "forex", "double your money",
+            "guaranteed returns", "high returns", "scheme", "plan",
+            # Hindi investment
+            "nivesh", "munafa", "faayda", "paisa double", "paisa lagao",
+        ]):
+            tactics.append("investment_lure")
+        
+        # Link sharing / phishing URL
+        if any(w in msg for w in [
+            "click", "link", "url", "website", "visit", "open this",
+            "download", "install", "app download", "register here",
+            "sign up", "form fill", ".com", ".in", ".dev", ".xyz", ".top",
+            ".online", ".site", "http", "https", "wa.me", "t.me",
+        ]):
+            tactics.append("link_share")
+        
+        # Scammer frustration / anger (re-engagement needed)
+        if any(w in msg for w in [
+            "fooling", "fool me", "wasting time", "time waste", "fraud",
+            "not serious", "are you serious", "joking", "joke",
+            "stop wasting", "pagal", "bakwas", "bewakoof", "chutiya",
+            "mazaak", "majak", "tang mat kar", "pareshan mat kar",
+            "seriously", "listen properly", "pay attention", "focus",
+            "are u fooling", "are you fooling", "stop joking",
+            "i'm serious", "i am serious", "this is serious",
+            "what's wrong with you", "idiot", "stupid",
+            "you are wasting", "don't waste", "hurry up",
+            "make up your mind", "decide now", "do it now",
+        ]):
+            tactics.append("scammer_frustration")
+        
         # Scammer confirming/insisting (response to our doubt) - triggers CONFIRMATION_DOUBT pool
         confirmation_phrases = [
             "right number", "right person", "correct number", "correct person", 
@@ -1026,6 +1200,10 @@ class HoneypotAgent:
             return "digital_arrest"
         elif "courier" in tactics:
             return "courier_scam"
+        elif "job_offer" in tactics:
+            return "job_loan_scam"
+        elif "investment_lure" in tactics:
+            return "investment_scam"
         elif "payment_lure" in tactics:
             return "refund_scam"  # Prize/refund/cashback scams
         elif "threat" in tactics:
@@ -1094,7 +1272,13 @@ class HoneypotAgent:
             context["greeting_stage"] = True
             pool = self.HINDI_GREETING_RESPONSES if lang == "hi" else self.GREETING_RESPONSES
         
-        # 0.5. RAPPORT / SOCIAL ENGINEERING - scammer trying to build familiarity
+        # 0.5 SCAMMER FRUSTRATION - highest priority after greeting
+        # When scammer says "are u fooling me", "stop wasting time" etc.
+        # We MUST re-engage immediately with apology + renewed interest
+        elif "scammer_frustration" in tactics:
+            pool = self.HINDI_SCAMMER_FRUSTRATION_RESPONSES if lang == "hi" else self.SCAMMER_FRUSTRATION_RESPONSES
+        
+        # 0.7. RAPPORT / SOCIAL ENGINEERING - scammer trying to build familiarity
         # ("u don't know me?", "we met in train", "i'm your old friend")
         # Respond as confused person who doesn't recall, stay polite and engaged
         elif self._is_rapport_message(scammer_message):
@@ -1112,7 +1296,40 @@ class HoneypotAgent:
         elif message_count <= 1:
             pool = self.HINDI_INITIAL_RESPONSES if lang == "hi" else self.INITIAL_RESPONSES
         
+        # 3.5 LINK SHARING - scammer shared a link/URL to click
+        # Tech-confused persona who WANTS to click but can't figure out how
+        # Must be before scam-type routing so links get caught regardless of scam type
+        elif "link_share" in tactics:
+            pool = self.HINDI_LINK_CLICK_RESPONSES if lang == "hi" else self.LINK_CLICK_RESPONSES
+        
         # 4. SCAM-TYPE SPECIFIC RESPONSES ─────────────────────────────────────
+        
+        # Job / work-from-home / earning scam — show INTEREST and excitement
+        elif scam_type == "job_loan_scam" or "job_offer" in tactics:
+            if "otp_request" in tactics:
+                pool = self.HINDI_OTP_RESPONSES if lang == "hi" else self.OTP_RESPONSES
+            elif "payment_request" in tactics or "credential" in tactics:
+                # They want money (registration fee, advance) - show tech confusion
+                if message_count > 4:
+                    pool = self.HINDI_UPI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.UPI_TECH_CONFUSION_RESPONSES
+                else:
+                    pool = self.HINDI_DETAIL_SEEKING if lang == "hi" else self.DETAIL_SEEKING
+                    context["intel_requested"] = True
+            else:
+                # Show excitement about the job opportunity!
+                pool = self.HINDI_JOB_MONEY_RESPONSES if lang == "hi" else self.JOB_MONEY_RESPONSES
+        
+        # Investment / trading scam — also show INTEREST
+        elif scam_type == "investment_scam" or "investment_lure" in tactics:
+            if "payment_request" in tactics or "credential" in tactics:
+                if message_count > 4:
+                    pool = self.HINDI_UPI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.UPI_TECH_CONFUSION_RESPONSES
+                else:
+                    pool = self.HINDI_DETAIL_SEEKING if lang == "hi" else self.DETAIL_SEEKING
+                    context["intel_requested"] = True
+            else:
+                # Show excitement about investment/money opportunity
+                pool = self.HINDI_JOB_MONEY_RESPONSES if lang == "hi" else self.JOB_MONEY_RESPONSES
         
         # Digital arrest scam (video call based)
         elif scam_type == "digital_arrest" or "digital_arrest" in tactics:
@@ -1179,18 +1396,26 @@ class HoneypotAgent:
                 pool = self.HINDI_DETAIL_SEEKING if lang == "hi" else self.DETAIL_SEEKING
                 context["intel_requested"] = True
         
-        # 8. URGENCY - stall for time
+        # 8. URGENCY - mix stalling with interest (not pure deflection)
         elif "urgency" in tactics:
-            pool = self.HINDI_STALLING_RESPONSES if lang == "hi" else self.STALLING_RESPONSES
+            # 50% stalling, 50% interested follow-up (to not seem purely evasive)
+            if random.random() > 0.5:
+                pool = self.HINDI_STALLING_RESPONSES if lang == "hi" else self.STALLING_RESPONSES
+            else:
+                pool = self.HINDI_SHORT_FOLLOWUP_RESPONSES if lang == "hi" else self.SHORT_FOLLOWUP_RESPONSES
         
-        # 9. DEFAULT - mild stalling/confusion based on conversation stage
+        # 9. DEFAULT - context-aware fallback based on conversation stage
         else:
             if message_count > 5 and context.get("intel_requested"):
                 pool = self.HINDI_UPI_TECH_CONFUSION_RESPONSES if lang == "hi" else self.UPI_TECH_CONFUSION_RESPONSES
             elif message_count > 3:
-                pool = self.HINDI_STALLING_RESPONSES if lang == "hi" else self.STALLING_RESPONSES
+                # Mix stalling with neutral curiosity (not JUST stalling)
+                if random.random() > 0.4:
+                    pool = self.HINDI_NEUTRAL_RESPONSES if lang == "hi" else self.NEUTRAL_RESPONSES
+                else:
+                    pool = self.HINDI_STALLING_RESPONSES if lang == "hi" else self.STALLING_RESPONSES
             else:
-                pool = self.HINDI_VERIFICATION_RESPONSES if lang == "hi" else self.VERIFICATION_RESPONSES
+                pool = self.HINDI_NEUTRAL_RESPONSES if lang == "hi" else self.NEUTRAL_RESPONSES
         
         # ─── SMART ROTATION ──────────────────────────────────────────────────
         recent = context["responses_given"][-6:]
@@ -1263,6 +1488,9 @@ class HoneypotAgent:
         if "account_request" in tactics: confidence += 0.15
         if "credential" in tactics: confidence += 0.2
         if "courier" in tactics: confidence += 0.15
+        if "job_offer" in tactics: confidence += 0.15
+        if "investment_lure" in tactics: confidence += 0.15
+        if "link_share" in tactics: confidence += 0.1
         
         # More messages = more confidence (capped)
         confidence += min(msg_count * 0.03, 0.15)
@@ -1392,6 +1620,14 @@ class HoneypotAgent:
             tactic_labels.append("money lure")
         if "payment_request" in tactics:
             tactic_labels.append("payment request")
+        if "job_offer" in tactics:
+            tactic_labels.append("job offer")
+        if "investment_lure" in tactics:
+            tactic_labels.append("investment lure")
+        if "link_share" in tactics:
+            tactic_labels.append("phishing link")
+        if "scammer_frustration" in tactics:
+            tactic_labels.append("scammer frustrated")
         
         if tactic_labels:
             notes_parts.append(f"TACTICS: {', '.join(tactic_labels)}")
@@ -1447,9 +1683,12 @@ class HoneypotAgent:
         
         Response Priority:
         1. Greeting messages → warm, polite greeting replies
-        2. Rapport/social engineering → confused but polite "I don't recall" responses
-        3. Short/vague messages → follow-up questions
-        4. Other messages → neutral, cautious responses
+        2. Scammer frustration → apologize, show renewed interest
+        3. Job/money offers → show excitement (even before scam confirmed)
+        4. Link sharing → tech confusion about clicking
+        5. Rapport/social engineering → confused but polite "I don't recall" responses
+        6. Short/vague messages → follow-up questions
+        7. Other messages → neutral, cautious responses
         
         The greeting_stage flag is set here when a greeting is detected,
         allowing the system to show "Rapport Initialization" stage.
@@ -1457,6 +1696,7 @@ class HoneypotAgent:
         context = self._get_context(session_id)
         
         # Still analyze tactics even for non-scam to stay contextual
+        tactics = []
         if scammer_message:
             tactics = self._detect_tactics(scammer_message)
             context["detected_tactics"].update(tactics)
@@ -1470,14 +1710,24 @@ class HoneypotAgent:
         if scammer_message and is_greeting_message(scammer_message):
             context["greeting_stage"] = True  # Set flag for stage tracking
             pool = self.HINDI_GREETING_RESPONSES if lang == "hi" else self.GREETING_RESPONSES
-        # PRIORITY 2: Rapport / social engineering - scammer building familiarity
+        # PRIORITY 2: Scammer frustrated - re-engage immediately
+        elif "scammer_frustration" in tactics:
+            pool = self.HINDI_SCAMMER_FRUSTRATION_RESPONSES if lang == "hi" else self.SCAMMER_FRUSTRATION_RESPONSES
+        # PRIORITY 3: Job/money offer - show interest even before scam confirmed!
+        # This is critical for job scams that build up slowly
+        elif "job_offer" in tactics or "investment_lure" in tactics:
+            pool = self.HINDI_JOB_MONEY_RESPONSES if lang == "hi" else self.JOB_MONEY_RESPONSES
+        # PRIORITY 4: Link shared - show tech confusion about clicking
+        elif "link_share" in tactics:
+            pool = self.HINDI_LINK_CLICK_RESPONSES if lang == "hi" else self.LINK_CLICK_RESPONSES
+        # PRIORITY 5: Rapport / social engineering - scammer building familiarity
         # ("u don't know me?", "we met in train", "guess who")
         elif scammer_message and self._is_rapport_message(scammer_message):
             pool = self.HINDI_RAPPORT_RESPONSES if lang == "hi" else self.RAPPORT_RESPONSES
-        # PRIORITY 3: Check if this is a short/vague message - respond with follow-up
+        # PRIORITY 6: Check if this is a short/vague message - respond with follow-up
         elif scammer_message and self._is_short_message(scammer_message):
             pool = self.HINDI_SHORT_FOLLOWUP_RESPONSES if lang == "hi" else self.SHORT_FOLLOWUP_RESPONSES
-        # PRIORITY 4: Default neutral response for other messages
+        # PRIORITY 7: Default neutral response for other messages
         else:
             pool = self.HINDI_NEUTRAL_RESPONSES if lang == "hi" else self.NEUTRAL_RESPONSES
         
@@ -1535,6 +1785,14 @@ class HoneypotAgent:
         
         if context.get("greeting_stage", False):
             return "greeting_rapport"
+        if last_tactic == "scammer_frustration":
+            return "re_engagement_apology"
+        if last_tactic == "job_offer":
+            return "excited_interest_job"
+        if last_tactic == "investment_lure":
+            return "excited_interest_investment"
+        if last_tactic == "link_share":
+            return "tech_confusion_link"
         if last_tactic == "digital_arrest":
             return "fearful_compliance_digital_arrest"
         if last_tactic == "courier":

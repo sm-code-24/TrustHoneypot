@@ -17,6 +17,7 @@ avoid obvious keywords while still exhibiting scam behavior patterns.
 import re
 from typing import Tuple, Dict, List, Set
 from dataclasses import dataclass, field
+from intent_classifier import classify_intent
 
 
 @dataclass
@@ -312,9 +313,16 @@ class ScamDetector:
     # THRESHOLDS AND CONFIGURATION
     # =========================================================================
     
-    SCAM_THRESHOLD = 30  # Base threshold
-    HIGH_CONFIDENCE_THRESHOLD = 60  # Very confident it's a scam
-    CRITICAL_THRESHOLD = 100  # Definitely a scam
+    # =========================================================================
+    # v2.2 THRESHOLD ENGINE — 5 graduated thresholds
+    # =========================================================================
+    MONITORING_THRESHOLD = 30    # Start internal monitoring (no UI exposure)
+    REASONING_THRESHOLD = 40     # Show detection reasoning in UI
+    STORAGE_THRESHOLD = 40       # Save session to DB / register intelligence
+    PATTERN_THRESHOLD = 50       # Compute and show pattern similarity
+    SCAM_THRESHOLD = 60          # Confirm scam, show fraud badge
+    HIGH_CONFIDENCE_THRESHOLD = 80  # Very confident it's a scam
+    CRITICAL_THRESHOLD = 100     # Definitely a scam
     
     # Category bonuses (hitting multiple categories = higher confidence)
     MULTI_CATEGORY_BONUS = {
@@ -329,6 +337,7 @@ class ScamDetector:
         self.session_details: Dict[str, DetectionResult] = {}
         self.session_categories: Dict[str, Set[str]] = {}
         self.session_message_count: Dict[str, int] = {}
+        self.session_intents: Dict[str, List[dict]] = {}  # v2.2: intent history per session
     
     def _check_keywords(self, text: str, keyword_dict: dict, category: str, 
                         categories: set) -> int:
@@ -438,10 +447,17 @@ class ScamDetector:
         if session_id not in self.session_categories:
             self.session_categories[session_id] = set()
             self.session_message_count[session_id] = 0
+            self.session_intents[session_id] = []
         
         self.session_message_count[session_id] += 1
         categories = self.session_categories[session_id]
         message_score = 0
+        
+        # v2.2: Intent classification (runs before keyword scoring)
+        intent_result = classify_intent(text)
+        self.session_intents.setdefault(session_id, []).append(intent_result)
+        intent_risk = intent_result.get("risk_increment", 0)
+        message_score += intent_risk
         
         # LAYER 1: Keyword scoring
         all_keyword_dicts = [
@@ -491,20 +507,25 @@ class ScamDetector:
         is_scam = total_score >= self.SCAM_THRESHOLD
         
         # Store detailed result
+        inferred_type = scam_type if scam_type != "unknown" else self._infer_scam_type(categories, total_score)
         self.session_details[session_id] = DetectionResult(
             total_score=total_score,
             is_scam=is_scam,
             confidence=confidence,
             risk_level=risk_level,
-            scam_type=scam_type if scam_type != "unknown" else self._infer_scam_type(categories),
+            scam_type=inferred_type,
             detected_patterns=pattern_matches,
             triggered_categories=categories.copy()
         )
         
         return total_score, is_scam
     
-    def _infer_scam_type(self, categories: Set[str]) -> str:
-        """Infer scam type from triggered categories."""
+    def _infer_scam_type(self, categories: Set[str], total_score: int = 0) -> str:
+        """Infer scam type from triggered categories.
+        
+        v2.2: Returns 'unknown' instead of 'generic_scam' when score < SCAM_THRESHOLD.
+        This prevents normal conversations from getting a scam label.
+        """
         if "govt_impersonation" in categories:
             return "government_impersonation"
         elif "identity_scam" in categories:
@@ -522,7 +543,10 @@ class ScamDetector:
         elif "verification" in categories:
             return "phishing"
         else:
-            return "generic_scam"
+            # v2.2: Only label as generic_scam if score warrants it
+            if total_score >= self.SCAM_THRESHOLD:
+                return "generic_scam"
+            return "unknown"
     
     def get_session_score(self, session_id: str) -> int:
         """Get the current risk score for a session."""
@@ -531,6 +555,10 @@ class ScamDetector:
     def get_detection_details(self, session_id: str) -> DetectionResult:
         """Get detailed detection result for a session."""
         return self.session_details.get(session_id, DetectionResult())
+    
+    def get_session_intents(self, session_id: str) -> List[dict]:
+        """Get intent classification history for a session (v2.2)."""
+        return self.session_intents.get(session_id, [])
     
     def reset_session(self, session_id: str) -> None:
         """Clear score for a session (useful for testing)."""
@@ -542,6 +570,8 @@ class ScamDetector:
             del self.session_categories[session_id]
         if session_id in self.session_message_count:
             del self.session_message_count[session_id]
+        if session_id in self.session_intents:
+            del self.session_intents[session_id]
 
 
 # Single instance used across the app

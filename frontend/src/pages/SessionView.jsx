@@ -673,7 +673,14 @@ export default function SessionView() {
                 className="text-sm max-w-sm"
                 style={{ color: "var(--text-tertiary)" }}>
                 Type a scam message to begin, or click{" "}
-                <span className="text-emerald-400 font-medium">Simulate</span>{" "}
+                <button
+                  onClick={() => {
+                    if (scenarios.length > 0) handleSimulate(scenarios[0].id);
+                  }}
+                  className="text-emerald-400 font-medium hover:underline cursor-pointer bg-transparent border-none p-0 inline"
+                  disabled={simulating || loading || scenarios.length === 0}>
+                  Simulate
+                </button>{" "}
                 to run a full demo scenario automatically.
               </p>
             </div>
@@ -951,6 +958,105 @@ export default function SessionView() {
                   </div>
                 </div>
               )}
+
+              {/* v2.2: Extracted Intelligence Details */}
+              {analysis.intelligence &&
+                (() => {
+                  const intel = analysis.intelligence;
+                  const intelEntries = [
+                    {
+                      label: "UPI IDs",
+                      items: intel.upiIds || [],
+                      color: "text-purple-400",
+                      bg: "bg-purple-500/10",
+                      border: "border-purple-500/20",
+                    },
+                    {
+                      label: "Phone Numbers",
+                      items: intel.phoneNumbers || [],
+                      color: "text-blue-400",
+                      bg: "bg-blue-500/10",
+                      border: "border-blue-500/20",
+                    },
+                    {
+                      label: "Bank Accounts",
+                      items: intel.bankAccounts || [],
+                      color: "text-amber-400",
+                      bg: "bg-amber-500/10",
+                      border: "border-amber-500/20",
+                    },
+                    {
+                      label: "Phishing Links",
+                      items: intel.phishingLinks || [],
+                      color: "text-red-400",
+                      bg: "bg-red-500/10",
+                      border: "border-red-500/20",
+                    },
+                    {
+                      label: "Emails",
+                      items: intel.emails || [],
+                      color: "text-cyan-400",
+                      bg: "bg-cyan-500/10",
+                      border: "border-cyan-500/20",
+                    },
+                    {
+                      label: "Aadhaar Numbers",
+                      items: intel.aadhaarNumbers || [],
+                      color: "text-orange-400",
+                      bg: "bg-orange-500/10",
+                      border: "border-orange-500/20",
+                    },
+                    {
+                      label: "PAN Numbers",
+                      items: intel.panNumbers || [],
+                      color: "text-teal-400",
+                      bg: "bg-teal-500/10",
+                      border: "border-teal-500/20",
+                    },
+                    {
+                      label: "Crypto Wallets",
+                      items: intel.cryptoWallets || [],
+                      color: "text-yellow-400",
+                      bg: "bg-yellow-500/10",
+                      border: "border-yellow-500/20",
+                    },
+                  ];
+                  const hasAny = intelEntries.some((e) => e.items.length > 0);
+                  if (!hasAny) return null;
+                  return (
+                    <div className="glass rounded-xl p-3 space-y-2">
+                      <div className="flex items-center gap-2">
+                        <Zap size={12} className="text-amber-400" />
+                        <h4
+                          className="text-xs font-semibold"
+                          style={{ color: "var(--text-heading)" }}>
+                          Extracted Intelligence
+                        </h4>
+                      </div>
+                      <div className="space-y-1.5">
+                        {intelEntries
+                          .filter((e) => e.items.length > 0)
+                          .map(({ label, items, color, bg, border }) => (
+                            <div key={label} className="space-y-1">
+                              <span
+                                className={`text-[10px] font-medium ${color}`}>
+                                {label}
+                              </span>
+                              <div className="flex flex-wrap gap-1">
+                                {items.map((val, idx) => (
+                                  <span
+                                    key={idx}
+                                    className={`inline-block px-2 py-0.5 rounded text-[10px] font-mono ${bg} ${color} border ${border}`}>
+                                    {val}
+                                  </span>
+                                ))}
+                              </div>
+                            </div>
+                          ))}
+                      </div>
+                    </div>
+                  );
+                })()}
 
               {/* Stage Progression Timeline (from simulation) */}
               {simStages.length > 0 && (

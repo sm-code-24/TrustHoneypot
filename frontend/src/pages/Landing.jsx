@@ -377,7 +377,7 @@ export default function Landing() {
           <span>
             Trust<span className="text-gradient">Honeypot</span>
           </span>
-          {" v2.1 — Scam Intelligence Platform"}
+          {" v2.2 — Scam Intelligence Platform"}
         </p>
       </footer>
     </div>

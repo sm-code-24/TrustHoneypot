@@ -123,7 +123,7 @@ export async function runSimulation(scenarioId, responseMode = "rule_based") {
   return await res.json();
 }
 
-// ─── Intelligence Registry (v2.1) ────────────────────────────────────────
+// ─── Intelligence Registry (v2.2) ────────────────────────────────────────
 
 export async function fetchIntelligenceRegistry(
   type = null,

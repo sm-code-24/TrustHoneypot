@@ -188,6 +188,18 @@ STRICT RULES:
       Output: "Arey haan ji, ye sab samajh mein nahi aa raha mujhe... thoda time do na beta."
       Input (English reply): "Please wait, I am trying to understand."
       Output: "Wait wait, I am trying to understand ji... this technology is confusing."
+12. ANTI-REPETITION (v2.2):
+    - You will receive "Recent Turns" showing the last few messages exchanged.
+    - NEVER repeat or closely mirror phrasing from the Recent Turns.
+    - Vary sentence openers, filler words, and question structures each time.
+    - If the Original Reply uses the same words as a recent turn, rephrase MORE aggressively.
+13. STAGE-AWARE TONE (v2.2):
+    - The Strategy field tells you the engagement stage.
+    - "greeting_rapport" → warm, casual, no suspicion at all
+    - "initial_confusion" / "stalling_confused" → genuinely confused, asking questions
+    - "curious_but_cautious" → slightly wary, probing for details
+    - "fearful_compliance" → scared, trembling, but slowly cooperating
+    - "detail_seeking_extraction" → worried but trying to help, asking for specifics
 
 OUTPUT FORMAT:
 - Return ONLY the rephrased reply text, nothing else
@@ -198,7 +210,8 @@ OUTPUT FORMAT:
 You receive:
 - Strategy: The engagement strategy chosen by the rule engine
 - Original Reply: The rule-based reply to rephrase
-- Last Scammer Message: Context of what the scammer said"""
+- Last Scammer Message: Context of what the scammer said
+- Recent Turns: Last few conversation exchanges for anti-repetition context"""
 
 
 class LLMService:
@@ -343,10 +356,18 @@ class LLMService:
         self,
         strategy: str,
         rule_reply: str,
-        scammer_message: str
+        scammer_message: str,
+        recent_turns: Optional[list] = None
     ) -> Tuple[str, str]:
         """
         Rephrase a rule-based reply using LLM.
+
+        Args:
+            strategy: The engagement strategy label (e.g. "initial_confusion")
+            rule_reply: The rule-based reply text to rephrase
+            scammer_message: The last scammer message for context
+            recent_turns: Optional list of recent conversation dicts [{role, text}]
+                          Used for anti-repetition (v2.2)
 
         Returns:
             (final_reply, source) where source is "llm" | "rule_based" | "rule_based_fallback"
@@ -366,12 +387,24 @@ class LLMService:
         start_time = time.time()
 
         try:
+            # Build recent turns context for anti-repetition (v2.2)
+            turns_str = ""
+            if recent_turns:
+                last_turns = recent_turns[-6:]  # last 3 exchanges (6 messages)
+                turns_lines = []
+                for t in last_turns:
+                    role_label = "Agent" if t.get("role") == "agent" else "Scammer"
+                    turns_lines.append(f"  {role_label}: {t.get('text', '')}")
+                turns_str = "\n".join(turns_lines)
+
             prompt = (
                 f"Strategy: {strategy}\n"
                 f"Original Reply: {rule_reply}\n"
-                f"Last Scammer Message: {scammer_message}\n\n"
-                f"Rephrase the Original Reply naturally:"
+                f"Last Scammer Message: {scammer_message}\n"
             )
+            if turns_str:
+                prompt += f"Recent Turns:\n{turns_str}\n"
+            prompt += "\nRephrase the Original Reply naturally:"
 
             llm_reply = await asyncio.wait_for(
                 self._generate(prompt),

@@ -41,6 +41,10 @@ class SessionMemory:
                 "scamConfirmed": False,
                 "callbackSent": False,
                 "agentResponse": None,
+                # v2.2: Conversation stage engine
+                "sessionState": "GREETING",  # GREETING → RAPPORT_BUILDING → MONITORING → ESCALATION
+                "cumulativeRiskScore": 0,     # Cumulative risk score from detector
+                "lastIntent": None,           # Last classified intent
             }
     
     def add_message(self, session_id: str, sender: str, text: str) -> None:
@@ -122,6 +126,40 @@ class SessionMemory:
     def session_exists(self, session_id: str) -> bool:
         """Check if session exists"""
         return session_id in self.sessions
+    
+    # v2.2: Session state tracking
+    def get_session_state(self, session_id: str) -> str:
+        """Get conversation stage state for session."""
+        if session_id not in self.sessions:
+            return "GREETING"
+        return self.sessions[session_id].get("sessionState", "GREETING")
+    
+    def set_session_state(self, session_id: str, state: str) -> None:
+        """Update conversation stage state."""
+        if session_id in self.sessions:
+            self.sessions[session_id]["sessionState"] = state
+    
+    def update_risk_score(self, session_id: str, score: int) -> None:
+        """Update cumulative risk score for session."""
+        if session_id in self.sessions:
+            self.sessions[session_id]["cumulativeRiskScore"] = score
+    
+    def get_risk_score(self, session_id: str) -> int:
+        """Get cumulative risk score for session."""
+        if session_id not in self.sessions:
+            return 0
+        return self.sessions[session_id].get("cumulativeRiskScore", 0)
+    
+    def set_last_intent(self, session_id: str, intent: str) -> None:
+        """Store last classified intent for session."""
+        if session_id in self.sessions:
+            self.sessions[session_id]["lastIntent"] = intent
+    
+    def get_last_intent(self, session_id: str) -> Optional[str]:
+        """Get last classified intent for session."""
+        if session_id not in self.sessions:
+            return None
+        return self.sessions[session_id].get("lastIntent")
     
     def cleanup_stale_sessions(self) -> int:
         """Remove sessions older than SESSION_TTL_HOURS. Returns count removed."""

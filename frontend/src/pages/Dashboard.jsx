@@ -214,8 +214,10 @@ export default function Dashboard() {
               200 Hustlers
             </Link>
             {" — "}
-            <span>Trust<span className="text-gradient">Honeypot</span></span>
-            {" v2.1 — Scam Intelligence Platform"}
+            <span>
+              Trust<span className="text-gradient">Honeypot</span>
+            </span>
+            {" v2.2 — Scam Intelligence Platform"}
           </p>
         </footer>
       </div>

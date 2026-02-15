@@ -93,6 +93,8 @@ class HoneypotResponse(BaseModel):
     fraud_color: Optional[str] = None
     detection_reasons: Optional[List[str]] = None
     pattern_similarity: Optional[float] = None
+    # v2.2: actual intelligence values for frontend display
+    intelligence: Optional[dict] = None
 
 
 class SimulationRequest(BaseModel):

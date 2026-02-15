@@ -491,13 +491,13 @@ export default function TechDocsView() {
         </div>
       </section>
 
-      {/* v2.1 Features */}
+      {/* v2.2 Features */}
       <section className="glass rounded-2xl p-6 md:p-8">
         <h3
           className="text-lg font-semibold mb-5 flex items-center gap-2"
           style={{ color: "var(--text-heading)" }}>
           <Zap size={18} className="text-purple-400" />
-          v2.1 Enhancements
+          v2.2 Enhancements
         </h3>
         <div className="grid sm:grid-cols-2 gap-3">
           {[

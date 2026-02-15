@@ -611,6 +611,9 @@ export default function IntelligenceView() {
                   borderColor: "var(--border-primary)",
                 }}>
                 <th className="text-left px-5 py-2.5 font-medium">Session</th>
+                <th className="text-left px-5 py-2.5 font-medium hidden md:table-cell">
+                  Time
+                </th>
                 <th className="text-left px-5 py-2.5 font-medium">
                   Fraud Type
                 </th>
@@ -627,6 +630,27 @@ export default function IntelligenceView() {
                   s.intelligence_counts || {},
                 ).reduce((a, b) => a + b, 0);
                 const rc = RISK_COLORS[s.risk_level] || "";
+                // v2.2: Format timestamp as DD MMM YYYY, HH:mm
+                let timeStr = "";
+                if (s.timestamp) {
+                  try {
+                    const d = new Date(s.timestamp);
+                    timeStr =
+                      d.toLocaleDateString("en-GB", {
+                        day: "2-digit",
+                        month: "short",
+                        year: "numeric",
+                      }) +
+                      ", " +
+                      d.toLocaleTimeString("en-GB", {
+                        hour: "2-digit",
+                        minute: "2-digit",
+                        hour12: false,
+                      });
+                  } catch {
+                    timeStr = "";
+                  }
+                }
                 return (
                   <tr
                     key={s.session_id}
@@ -637,12 +661,22 @@ export default function IntelligenceView() {
                       style={{ color: "var(--text-secondary)" }}>
                       {(s.session_id || "").slice(0, 8)}
                     </td>
+                    <td
+                      className="px-5 py-2.5 text-[10px] hidden md:table-cell"
+                      style={{ color: "var(--text-muted)" }}>
+                      {timeStr || "—"}
+                    </td>
                     <td className="px-5 py-2.5">
-                      <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold border border-red-500/20 text-red-400 bg-red-500/10">
-                        {(s.fraud_type || s.scam_type || "unknown")
-                          .replace(/_/g, " ")
-                          .toUpperCase()}
-                      </span>
+                      {s.scam_confirmed ?
+                        <span className="inline-block px-2 py-0.5 rounded text-[10px] font-bold border border-red-500/20 text-red-400 bg-red-500/10">
+                          {(s.fraud_type || s.scam_type || "unknown")
+                            .replace(/_/g, " ")
+                            .toUpperCase()}
+                        </span>
+                      : <span className="inline-block px-2 py-0.5 rounded text-[10px] font-medium border border-slate-500/20 text-slate-400 bg-slate-500/10">
+                          MONITORING
+                        </span>
+                      }
                     </td>
                     <td
                       className="px-5 py-2.5 text-center text-xs"
@@ -667,7 +701,7 @@ export default function IntelligenceView() {
               {sessions.length === 0 && (
                 <tr>
                   <td
-                    colSpan={5}
+                    colSpan={6}
                     className="px-5 py-8 text-center text-sm"
                     style={{ color: "var(--text-muted)" }}>
                     No sessions recorded yet.

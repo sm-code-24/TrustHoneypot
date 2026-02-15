@@ -63,7 +63,7 @@ const SOLUTION_HIGHLIGHTS = [
   {
     icon: Radio,
     title: "Intelligence Registry",
-    desc: "Automatically captures and tracks UPI IDs, bank accounts, phone numbers, Aadhaar, PAN, and phishing URLs. v2.1 adds a full registry with clickable identifiers, recurring threat detection, and Excel export.",
+    desc: "Automatically captures and tracks UPI IDs, bank accounts, phone numbers, Aadhaar, PAN, and phishing URLs. v2.2 adds a full registry with clickable identifiers, recurring threat detection, and Excel export.",
     color: "from-emerald-500 to-teal-400",
   },
   {
@@ -253,7 +253,7 @@ export default function AboutView() {
             { value: "5", label: "Detection Layers" },
             { value: "8", label: "Intel Extractors" },
             { value: "260+", label: "Response Templates" },
-            { value: "v2.1", label: "Current Version" },
+            { value: "v2.2", label: "Current Version" },
             { value: "4", label: "DB Collections" },
           ].map((stat) => (
             <div key={stat.label}>

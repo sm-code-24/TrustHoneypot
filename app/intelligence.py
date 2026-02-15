@@ -1,5 +1,5 @@
 """
-Intelligence Registry & Pattern Correlation Engine — TrustHoneypot v2.1
+Intelligence Registry & Pattern Correlation Engine — TrustHoneypot v2.2
 
 Manages a registry of extracted identifiers (UPI, Phone, Email, Bank, Link)
 with risk scoring, confidence, occurrence tracking, and session linking.
@@ -41,7 +41,7 @@ FRAUD_TYPE_MAP = {
     "loan_scam": "PAYMENT FRAUD",
     "job_loan_scam": "LOTTERY SCAM",
     "generic_scam": "GENERIC SCAM",
-    "unknown": "GENERIC SCAM",
+    "unknown": "MONITORING",
 }
 
 FRAUD_TYPE_COLORS = {
@@ -50,6 +50,7 @@ FRAUD_TYPE_COLORS = {
     "LOTTERY SCAM": "purple",
     "IMPERSONATION": "blue",
     "GENERIC SCAM": "slate",
+    "MONITORING": "slate",
 }
 
 
@@ -146,12 +147,32 @@ def generate_detection_reasoning(
     pattern_match_count: int = 0,
     similarity_score: float = 0.0,
     recurring: bool = False,
+    risk_score: int = 0,
 ) -> Dict:
     """
     Generate structured detection reasoning for session analysis.
-    Replaces generic scam message with detailed breakdown.
+    
+    v2.2: Only generates full reasoning when risk_score >= REASONING_THRESHOLD (40).
+    Below threshold, returns a minimal "monitoring" verdict.
     """
+    from detector import detector as _det
+    
     fraud_label = classify_fraud_type(scam_type)
+    
+    # v2.2: Below reasoning threshold → return minimal info
+    if risk_score < _det.REASONING_THRESHOLD:
+        return {
+            "verdict": "MONITORING — No scam indicators confirmed",
+            "fraud_type": fraud_label,
+            "fraud_color": get_fraud_color(fraud_label),
+            "risk_level": risk_level,
+            "confidence": confidence,
+            "similarity_score": 0.0,
+            "recurring": False,
+            "pattern_match_count": 0,
+            "reasons": [],
+        }
+    
     reasons = []
 
     # Analyze tactics for reasoning
@@ -188,8 +209,16 @@ def generate_detection_reasoning(
     if not reasons:
         reasons.append("Multiple scam indicators triggered")
 
+    # v2.2: Verdict reflects actual state
+    if risk_score >= _det.SCAM_THRESHOLD:
+        verdict = f"SCAM CONFIRMED — {fraud_label}"
+    elif risk_score >= _det.REASONING_THRESHOLD:
+        verdict = f"SUSPICIOUS — {fraud_label} indicators detected"
+    else:
+        verdict = "MONITORING — No scam indicators confirmed"
+
     return {
-        "verdict": f"SCAM CONFIRMED — {fraud_label}",
+        "verdict": verdict,
         "fraud_type": fraud_label,
         "fraud_color": get_fraud_color(fraud_label),
         "risk_level": risk_level,
