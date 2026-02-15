@@ -54,8 +54,8 @@ const TECH_STACK = [
         desc: "Primary detection authority — LLM never overrides rules",
       },
       {
-        name: "260+ Response Templates",
-        desc: "Bilingual (English + Hindi) category-specific templates across 15+ pools",
+        name: "290+ Response Templates",
+        desc: "Bilingual (English + Hindi) category-specific templates across 18+ pools",
       },
     ],
   },
@@ -515,7 +515,7 @@ export default function TechDocsView() {
             },
             {
               title: "Fraud Type Classification",
-              desc: "Sessions and callbacks display professional fraud type labels (PAYMENT FRAUD, KYC PHISHING, LOTTERY SCAM, etc.) with color-coded badges.",
+              desc: "Sessions and callbacks display professional fraud type labels (PAYMENT FRAUD, KYC PHISHING, LOTTERY SCAM, JOB SCAM, IMPERSONATION, etc.) with color-coded badges.",
             },
             {
               title: "Excel Export",

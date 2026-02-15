@@ -24,7 +24,7 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 │                                                          │
 │  ┌──────────┐  ┌──────────┐  ┌───────────┐  ┌────────┐ │
 │  │ Detector │  │  Agent   │  │ Extractor │  │Callback│ │
-│  │ 5-layer  │  │15+ pools │  │ 8 types   │  │  Govt  │ │
+│  │ 5-layer  │  │18+ pools │  │ 8 types   │  │  Govt  │ │
 │  │ scoring  │  │ rotation │  │ regex+NLP │  │ Portal │ │
 │  └──────────┘  └──────┬───┘  └───────────┘  └────────┘ │
 │                       │                                  │
@@ -57,7 +57,7 @@ An agentic honeypot that **engages scammers** with believable human-like convers
 | **5-Layer Detection**         | Keyword → Pattern → India-specific → Behavioral → Confidence scoring                         |
 | **18+ Scam Types**            | Digital arrest, courier, KYC, UPI, lottery, investment, crypto, and more                     |
 | **Bilingual (EN + HI)**       | Full Hindi/Hinglish support — detection, agent responses, and LLM rephrasing                 |
-| **Adaptive Agent**            | 15+ response pools × 2 languages (260+ phrases), context-aware rotation                      |
+| **Adaptive Agent**            | 18+ response pools × 2 languages (290+ phrases), context-aware rotation                      |
 | **Intelligence Registry**     | Track UPI IDs, bank accounts, phones, emails, links — with frequency, confidence, recurrence |
 | **Pattern Correlation**       | Fingerprint scam tactics, cross-session similarity scoring, recurring threat detection       |
 | **Fraud Type Classification** | Professional labels (PAYMENT FRAUD, KYC PHISHING, etc.) with color-coded badges              |
@@ -121,14 +121,14 @@ VITE_API_URL=http://localhost:8000
 VITE_API_KEY=your-api-key-here
 ```
 
-| Variable         | Required | Description                                   |
-| ---------------- | -------- | --------------------------------------------- |
-| `API_KEY`        | Yes      | API key for auth (`x-api-key` header)         |
-| `CALLBACK_URL`   | Yes      | Government portal callback endpoint           |
-| `GROQ_API_KEY`   | Yes      | Groq API key (from console.groq.com)          |
-| `GROQ_MODEL`     | No       | Model name (default: llama-3.3-70b-versatile) |
-| `MONGODB_URI`    | No       | MongoDB Atlas connection string               |
-| `LLM_TIMEOUT_MS` | No       | LLM timeout in ms (default: 8000)             |
+| Variable         | Required | Description                                                         |
+| ---------------- | -------- | ------------------------------------------------------------------- |
+| `API_KEY`        | Yes      | API key for auth (`x-api-key` header)                               |
+| `CALLBACK_URL`   | No       | Government portal callback endpoint (recorded internally if absent) |
+| `GROQ_API_KEY`   | Yes      | Groq API key (from console.groq.com)                                |
+| `GROQ_MODEL`     | No       | Model name (default: llama-3.3-70b-versatile)                       |
+| `MONGODB_URI`    | No       | MongoDB Atlas connection string                                     |
+| `LLM_TIMEOUT_MS` | No       | LLM timeout in ms (default: 8000)                                   |
 
 ### 3. Run Development
 
