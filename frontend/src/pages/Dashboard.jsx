@@ -52,9 +52,11 @@ export default function Dashboard() {
           setSidebarOpen(false);
           navigate("/");
         }}>
-        <div className="w-8 h-8 flex items-center justify-center rounded-lg bg-gradient-to-br from-blue-500 to-purple-600">
-          <Shield size={16} className="text-white" />
-        </div>
+        <img
+          src="/logo.png"
+          alt="TrustHoneypot Logo"
+          className="w-8 h-8 rounded-lg object-contain"
+        />
         <div className="flex flex-col">
           <span
             className="text-sm font-semibold tracking-tight leading-none"
@@ -163,10 +165,8 @@ export default function Dashboard() {
               style={{ color: "var(--text-tertiary)" }}>
               <Menu size={18} />
             </button>
-            <span
-              className="text-sm font-medium hidden sm:block"
-              style={{ color: "var(--text-secondary)" }}>
-              TrustHoneypot
+            <span className="text-sm font-medium hidden sm:block">
+              Trust<span className="text-gradient">Honeypot</span>
             </span>
           </div>
           <div className="flex items-center gap-3">
@@ -213,7 +213,9 @@ export default function Dashboard() {
               className="font-medium hover:underline">
               200 Hustlers
             </Link>
-            {" — "}TrustHoneypot v2.1 — Scam Intelligence Platform
+            {" — "}
+            <span>Trust<span className="text-gradient">Honeypot</span></span>
+            {" v2.1 — Scam Intelligence Platform"}
           </p>
         </footer>
       </div>

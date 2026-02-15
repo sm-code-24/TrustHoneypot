@@ -1,0 +1,56 @@
+{
+  "name": "TrustHoneypot - Scam Intelligence Platform",
+  "short_name": "TrustHoneypot",
+  "description": "AI-powered scam intelligence platform that detects, analyzes, and combats online scams in real time",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#1e293b",
+  "orientation": "portrait-primary",
+  "categories": ["security", "productivity", "utilities"],
+  "icons": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/og-image.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    },
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    }
+  ],
+  "screenshots": [
+    {
+      "src": "/og-image.png",
+      "sizes": "1200x630",
+      "type": "image/png",
+      "form_factor": "wide"
+    }
+  ],
+  "scope": "/",
+  "shortcuts": [
+    {
+      "name": "Live Session",
+      "short_name": "Session",
+      "description": "Start a scam detection session",
+      "url": "/dashboard/session",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    },
+    {
+      "name": "Intelligence",
+      "short_name": "Intel",
+      "description": "View threat intelligence",
+      "url": "/dashboard/intelligence",
+      "icons": [{ "src": "/favicon.svg", "sizes": "96x96" }]
+    }
+  ]
+}

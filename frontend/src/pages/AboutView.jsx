@@ -132,9 +132,11 @@ export default function AboutView() {
       {/* Project header */}
       <div className="glass rounded-2xl p-8 md:p-10 glow-border text-center">
         <div className="flex items-center justify-center gap-3 mb-5">
-          <div className="w-14 h-14 rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center shadow-xl shadow-blue-500/25">
-            <Shield size={28} className="text-white" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="TrustHoneypot Logo"
+            className="w-14 h-14 rounded-xl object-contain"
+          />
           <div className="text-left">
             <h2 className="text-2xl md:text-3xl font-bold text-gradient">
               200 Hustlers
@@ -149,10 +151,8 @@ export default function AboutView() {
         <p
           className="text-sm md:text-base max-w-2xl mx-auto leading-relaxed mt-2"
           style={{ color: "var(--text-tertiary)" }}>
-          <span
-            className="font-semibold"
-            style={{ color: "var(--text-heading)" }}>
-            TrustHoneypot
+          <span className="font-semibold">
+            Trust<span className="text-gradient">Honeypot</span>
           </span>{" "}
           is an agentic scam intelligence platform that engages fraudsters with
           believable AI conversations, extracts critical financial data like UPI
@@ -204,7 +204,11 @@ export default function AboutView() {
           <h3
             className="text-xl md:text-2xl font-bold"
             style={{ color: "var(--text-heading)" }}>
-            How TrustHoneypot Works
+            How{" "}
+            <span>
+              Trust<span className="text-gradient">Honeypot</span>
+            </span>{" "}
+            Works
           </h3>
           <p
             className="mt-2 text-sm max-w-xl mx-auto"

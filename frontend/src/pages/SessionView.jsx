@@ -68,15 +68,15 @@ function ModeSlider({ mode, onChange }) {
 }
 
 /* ── active mode badge ── */
-function ModeBadge({ mode, source }) {
-  if (mode === "llm" && source === "llm") {
+function ModeBadge({ source }) {
+  if (source === "llm") {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-purple-500/10 text-purple-400 border border-purple-500/20">
         <Sparkles size={10} /> LLM
       </span>
     );
   }
-  if (mode === "llm" && source === "rule_based_fallback") {
+  if (source === "rule_based_fallback") {
     return (
       <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-medium bg-amber-500/10 text-amber-400 border border-amber-500/20">
         <AlertTriangle size={10} /> Fallback
@@ -704,7 +704,7 @@ export default function SessionView() {
                 {m.text}
                 {m.source && (
                   <div className="mt-1.5">
-                    <ModeBadge mode={mode} source={m.source} />
+                    <ModeBadge source={m.source} />
                   </div>
                 )}
               </div>

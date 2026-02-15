@@ -53,13 +53,17 @@ from intelligence import (
 intel_registry = IntelligenceRegistryService(db_service)
 pattern_engine = PatternCorrelationService(db_service)
 
-# Set up logging so we can see what's happening
+# ─── Structured Logging ──────────────────────────────────────────────────────
 LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO").upper()
 logging.basicConfig(
     level=getattr(logging, LOG_LEVEL, logging.INFO),
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+    format="%(asctime)s  %(levelname)-8s  %(name)s  %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
 )
-logger = logging.getLogger(__name__)
+# Silence noisy third-party loggers in production
+for _noisy in ("httpcore", "httpx", "uvicorn.access", "watchfiles"):
+    logging.getLogger(_noisy).setLevel(logging.WARNING)
+logger = logging.getLogger("trusthoneypot")
 
 # Create the FastAPI app
 app = FastAPI(
@@ -73,7 +77,6 @@ app = FastAPI(
 # CORS — restrict in production, wide open in dev
 _default_origins = "https://trusthoneypot.tech,https://www.trusthoneypot.tech,http://localhost:5173,http://localhost:3000"
 _allowed_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", _default_origins).split(",") if o.strip()]
-logger.info(f"CORS allowed origins: {_allowed_origins}")
 app.add_middleware(
     CORSMiddleware,
     allow_origins=_allowed_origins,
@@ -97,7 +100,7 @@ async def add_timing_header(request: Request, call_next):
     elapsed_ms = (time.perf_counter() - start) * 1000
     response.headers["X-Process-Time"] = f"{elapsed_ms:.0f}ms"
     if elapsed_ms > 2000:
-        logger.warning(f"SLOW {request.method} {request.url.path} {elapsed_ms:.0f}ms")
+        logger.warning("slow_request  method=%s  path=%s  duration_ms=%.0f", request.method, request.url.path, elapsed_ms)
     return response
 
 
@@ -145,20 +148,26 @@ async def startup_event():
     """Log essential startup information and run initial cleanup."""
     memory.cleanup_stale_sessions()
     memory.enforce_limit()
-    logger.info("API Ready | Docs: /docs | Health: GET / | Honeypot: POST /honeypot")
+    _env = os.getenv("ENVIRONMENT", "development")
+    logger.info("="*60)
+    logger.info("TrustHoneypot API v%s  env=%s", app.version, _env)
+    logger.info("cors_origins=%s", _allowed_origins)
+    logger.info("rate_limit=%d/min  log_level=%s", RATE_LIMIT, LOG_LEVEL)
+    logger.info("routes  health=GET /  honeypot=POST /honeypot  docs=%s", "/docs" if app.docs_url else "disabled")
+    logger.info("="*60)
 
 
 @app.on_event("shutdown")
 async def shutdown_event():
     """Clean up resources on shutdown."""
     await llm_service.close()
-    logger.info("API shutdown complete")
+    logger.info("Graceful shutdown complete")
 
 
 @app.exception_handler(RequestValidationError)
 async def validation_exception_handler(request: Request, exc: RequestValidationError):
     """Log validation errors clearly."""
-    logger.error(f"422 ERROR | {request.url.path} | {exc.errors()}")
+    logger.error("validation_error  path=%s  detail=%s", request.url.path, exc.errors())
     
     return JSONResponse(
         status_code=422,
@@ -195,7 +204,7 @@ async def process_message(
         
         # Log full request body in one line
         request_dict = request.model_dump()
-        logger.info(f"[SESSION] [{session_id[:8]}] REQUEST: {json.dumps(request_dict, ensure_ascii=False)}")
+        logger.info("request  session=%s  mode=%s  message_len=%d", session_id[:8], response_mode, len(current_message))
         
         # Process conversation history for context
         # First, update agent's context awareness from history
@@ -236,17 +245,17 @@ async def process_message(
         # 1. Greeting-stage messages → use dedicated GREETING_LLM_PROMPT
         # 2. Normal scam messages → rephrase rule-based reply for naturalness
         if response_mode == "llm":
-            logger.info(f"[{session_id[:8]}] [LLM] Mode requested. enabled={llm_service.enabled}, api_key_set={bool(llm_service.api_key)}, model={llm_service.model_name}")
+            logger.info("llm_mode  session=%s  enabled=%s  model=%s", session_id[:8], llm_service.enabled, llm_service.model_name)
             if not llm_service.enabled:
                 llm_status = llm_service.get_status()
-                logger.warning(f"[{session_id[:8]}] [LLM] NOT ENABLED — status: {json.dumps(llm_status)}")
+                logger.warning("llm_disabled  session=%s  status=%s", session_id[:8], json.dumps(llm_status))
                 reply_source = "rule_based_fallback"
             elif is_greeting_message(current_message):
                 # PATH 1: Greeting-stage detection
                 # Use specialized greeting prompt that instructs LLM to be warm and polite,
                 # not defensive or suspicious. This prevents the old behavior where LLM
                 # would respond with "I'm not sure what this is about..." to simple "hi" messages.
-                logger.info(f"[{session_id[:8]}] [LLM] Greeting detected, using GREETING_LLM_PROMPT")
+                logger.info("llm_greeting  session=%s", session_id[:8])
                 try:
                     llm_reply, llm_source = await llm_service.generate_greeting_reply(
                         scammer_message=current_message
@@ -254,7 +263,7 @@ async def process_message(
                     agent_reply = llm_reply
                     reply_source = llm_source
                 except Exception as llm_err:
-                    logger.warning(f"[{session_id[:8]}] [LLM] Greeting generation failed: {llm_err}, using rule-based")
+                    logger.warning("llm_greeting_fallback  session=%s  error=%s", session_id[:8], llm_err)
                     reply_source = "rule_based_fallback"
             else:
                 # PATH 2: Normal scam engagement
@@ -269,8 +278,7 @@ async def process_message(
                     agent_reply = llm_reply
                     reply_source = llm_source
                 except Exception as llm_err:
-                    logger.warning(f"[{session_id[:8]}] [LLM] Rephrase failed: {llm_err}, using rule-based")
-                    print(f"[LLM] Rephrase failed: {llm_err}")
+                    logger.warning("llm_rephrase_fallback  session=%s  error=%s", session_id[:8], llm_err)
                     reply_source = "rule_based_fallback"
         
         memory.set_agent_response(session_id, agent_reply)
@@ -300,12 +308,12 @@ async def process_message(
         
         # Send callback if conditions met
         callback_sent = False
-        logger.info(f"[CALLBACK] [{session_id[:8]}] Checking eligibility: scam={scam_confirmed}, msgs={total_messages}, intel={json.dumps({k: len(v) if isinstance(v, list) else v for k, v in intelligence.items()}, ensure_ascii=False)}")
+        logger.debug("callback_check  session=%s  scam=%s  msgs=%d", session_id[:8], scam_confirmed, total_messages)
         callback_eligible = should_send_callback(scam_confirmed, total_messages, intelligence)
         
         if callback_eligible:
             already_sent = memory.is_callback_sent(session_id)
-            logger.info(f"[CALLBACK] [{session_id[:8]}] ELIGIBLE! already_sent={already_sent}")
+            logger.info("callback_eligible  session=%s  already_sent=%s", session_id[:8], already_sent)
             if not already_sent:
                 success = send_final_callback(session_id, total_messages, intelligence, agent_notes)
                 if success:
@@ -444,17 +452,17 @@ async def process_message(
             },
             "agentNotes": agent_notes
         }
-        logger.info(f"[AGENT] [{session_id[:8]}] INTERNAL: {json.dumps(internal_log, ensure_ascii=False)}")
-        
-        # Log simplified response
-        response_dict = response.model_dump()
-        logger.info(f"[SESSION] [{session_id[:8]}] RESPONSE: {json.dumps(response_dict, ensure_ascii=False)}")
-        logger.info(f"[CALLBACK] [{session_id[:8]}] FINAL_STATUS={'SENT ✅' if callback_sent else 'NOT_SENT ❌'} eligible={callback_eligible} already_sent_prev={memory.is_callback_sent(session_id) and not callback_sent}")
+        logger.debug("agent_internal  session=%s  data=%s", session_id[:8], json.dumps(internal_log, ensure_ascii=False))
+        logger.info(
+            "response  session=%s  risk=%s  confidence=%.2f  scam=%s  source=%s  callback=%s",
+            session_id[:8], resp_risk_level, resp_confidence, scam_confirmed, reply_source,
+            "sent" if callback_sent else ("eligible" if callback_eligible else "none"),
+        )
         
         return response
         
     except Exception as e:
-        logger.error(f"Error processing request: {str(e)}", exc_info=True)
+        logger.error("request_failed  error=%s", e, exc_info=True)
         raise HTTPException(status_code=500, detail=f"Internal error: {str(e)}")
 
 
@@ -620,7 +628,7 @@ async def run_simulation(
                     },
                     intelligence=intelligence,
                 )
-                logger.info(f"[SIM] [{session_id[:8]}] Callback record saved to DB")
+                logger.info("sim_callback_saved  session=%s", session_id[:8])
         
         # Save session summary to DB (was missing in simulation handler!)
         tactics_list = list(agent._get_context(session_id).get("detected_tactics", set()))
@@ -656,7 +664,7 @@ async def run_simulation(
             "callback_sent": callback_sent or memory.is_callback_sent(session_id),
         }
     
-    logger.info(f"[SIMULATION] Request: scenario={request.scenario_id} mode={request.response_mode}")
+    logger.info("simulation_start  scenario=%s  mode=%s", request.scenario_id, request.response_mode)
     
     result = await simulator.run_simulation(
         scenario_id=request.scenario_id,
@@ -1084,12 +1092,10 @@ async def backfill_intelligence(api_key: str = Depends(verify_api_key)):
         )
         backfilled += 1
     
-    logger.info(f"Backfilled intelligence from {backfilled} sessions")
+    logger.info("intelligence_backfill  sessions=%d", backfilled)
     return {"backfilled": backfilled, "message": f"Processed {backfilled} sessions"}
 
 
 if __name__ == "__main__":
     import uvicorn
-    print("Starting Agentic Honey-Pot API...")
-    print("Make sure your .env file has API_KEY set")
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000, log_level="info")

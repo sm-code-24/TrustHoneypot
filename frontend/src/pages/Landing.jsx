@@ -119,9 +119,11 @@ export default function Landing() {
       {/* Top bar */}
       <header className="relative z-10 flex items-center justify-between px-6 py-5 md:px-12">
         <div className="flex items-center gap-2.5">
-          <div className="relative w-9 h-9 flex items-center justify-center rounded-xl bg-gradient-to-br from-blue-500 to-purple-600 shadow-lg shadow-blue-500/25">
-            <Shield size={18} className="text-white" />
-          </div>
+          <img
+            src="/logo.png"
+            alt="TrustHoneypot Logo"
+            className="w-9 h-9 rounded-xl object-contain"
+          />
           <span
             className="text-lg font-bold tracking-tight"
             style={{ color: "var(--text-heading)" }}>
@@ -371,7 +373,11 @@ export default function Landing() {
             style={{ color: "var(--text-tertiary)" }}>
             200 Hustlers
           </Link>
-          {" — "}TrustHoneypot v2.1 — Scam Intelligence Platform
+          {" — "}
+          <span>
+            Trust<span className="text-gradient">Honeypot</span>
+          </span>
+          {" v2.1 — Scam Intelligence Platform"}
         </p>
       </footer>
     </div>

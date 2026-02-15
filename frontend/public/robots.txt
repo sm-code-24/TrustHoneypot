@@ -1,0 +1,6 @@
+User-agent: *
+Allow: /
+Disallow: /dashboard/session
+Disallow: /api/
+
+Sitemap: https://trusthoneypot.tech/sitemap.xml
