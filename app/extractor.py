@@ -116,6 +116,13 @@ class IntelligenceExtractor:
         r'rb\.gy/[a-zA-Z0-9]+',
         r'wa\.me/[0-9]+',  # WhatsApp links
         r't\.me/[a-zA-Z0-9_]+',  # Telegram links
+        # Bare domains with suspicious TLDs (no http:// prefix)
+        # Catches links like "demo-abc.dev", "earn-money.xyz", "job-portal.top"
+        # NOTE: No capturing groups — re.findall must return strings, not tuples
+        r'(?<![\w@])[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.(?:dev|xyz|top|online|site|club|info|click|link|work|date|bid|win|loan|cash|money|app|page|fun|icu|buzz|live|store|shop|pro|tech)\b',
+        # Bare domains with common TLDs when preceded by link/click context
+        # Handles: "click on the link example.com", "visit example.com", etc.
+        r'(?:click|visit|open|go to|check|see|tap)\s+(?:on\s+)?(?:the\s+)?(?:this\s+)?(?:link\s+)?[a-zA-Z0-9](?:[a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])?\.(?:com|in|org|net|co|io)\b',
     ]
     
     # =========================================================================
@@ -146,9 +153,13 @@ class IntelligenceExtractor:
         # Government impersonation
         "rbi notice", "trai notice", "income tax", "customs department", "cbi officer",
         # Jobs/Loans - scam patterns
-        "work from home job", "instant loan", "investment opportunity",
+        "work from home job", "working from home", "work from home", "earn from home",
+        "instant loan", "investment opportunity", "job opening", "job offer", "online job",
+        "earn daily", "earn per day", "guaranteed income", "data entry job",
+        "typing job", "part time job", "registration fee",
         # Actions - scam-specific
-        "click here", "click this link", "send money", "share details",
+        "click here", "click this link", "click on the link", "click the link",
+        "send money", "share details", "open the link", "visit the link",
         # Hindi urgency
         "jaldi karo", "abhi karo", "turant", "fauran", "der mat karo",
         # Hindi verification/account
@@ -301,8 +312,13 @@ class IntelligenceExtractor:
         # -----------------------------------------------------------------
         for pattern in self.URL_PATTERNS:
             matches = re.findall(pattern, text)
-            for url in matches:
-                data["phishingLinks"].add(url)
+            for match in matches:
+                # Handle both plain strings and tuple results from capturing groups
+                url = match[0] if isinstance(match, tuple) else match
+                if url:
+                    # Strip trailing punctuation that's not part of URLs
+                    url = url.rstrip('.,;:!?)]}')
+                    data["phishingLinks"].add(url)
         
         # -----------------------------------------------------------------
         # Extract Messaging IDs (WhatsApp, Telegram)

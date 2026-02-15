@@ -840,6 +840,8 @@ export default function SessionView() {
                           "text-purple-400 bg-purple-500/10 border-purple-500/20"
                         : analysis.fraud_color === "blue" ?
                           "text-blue-400 bg-blue-500/10 border-blue-500/20"
+                        : analysis.fraud_color === "orange" ?
+                          "text-orange-400 bg-orange-500/10 border-orange-500/20"
                         : "text-slate-400 bg-slate-500/10 border-slate-500/20"
                       }`}>
                       {analysis.fraud_type}

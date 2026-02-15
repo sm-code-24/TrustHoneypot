@@ -319,25 +319,27 @@ async def process_message(
             already_sent = memory.is_callback_sent(session_id)
             logger.info("callback_eligible  session=%s  already_sent=%s", session_id[:8], already_sent)
             if not already_sent:
-                success = send_final_callback(session_id, total_messages, intelligence, agent_notes)
-                if success:
-                    memory.mark_callback_sent(session_id)
-                    callback_sent = True
-                    # Save callback record to DB
-                    db_service.save_callback_record(
-                        session_id=session_id,
-                        status="sent",
-                        payload_summary={
-                            "totalMessages": total_messages,
-                            "intelligenceCounts": {
-                                "upiIds": len(intelligence.get("upiIds", [])),
-                                "phoneNumbers": len(intelligence.get("phoneNumbers", [])),
-                                "bankAccounts": len(intelligence.get("bankAccounts", [])),
-                                "phishingLinks": len(intelligence.get("phishingLinks", [])),
-                            }
-                        },
-                        intelligence=intelligence,
-                    )
+                cb_status, cb_payload = send_final_callback(session_id, total_messages, intelligence, agent_notes)
+                # Always mark callback as processed and save the record,
+                # regardless of whether the external POST succeeded.
+                # This ensures callbacks appear in the UI even when
+                # CALLBACK_URL is not configured or unreachable.
+                memory.mark_callback_sent(session_id)
+                callback_sent = True
+                db_service.save_callback_record(
+                    session_id=session_id,
+                    status=cb_status,
+                    payload_summary={
+                        "totalMessages": total_messages,
+                        "intelligenceCounts": {
+                            "upiIds": len(intelligence.get("upiIds", [])),
+                            "phoneNumbers": len(intelligence.get("phoneNumbers", [])),
+                            "bankAccounts": len(intelligence.get("bankAccounts", [])),
+                            "phishingLinks": len(intelligence.get("phishingLinks", [])),
+                        }
+                    },
+                    intelligence=intelligence,
+                )
         
         # Save session summary to DB (every message updates the summary)
         intel_counts = {
@@ -631,22 +633,20 @@ async def run_simulation(
         callback_eligible = should_send_callback(scam_confirmed, total_messages, intelligence)
         if callback_eligible and not memory.is_callback_sent(session_id):
             agent_notes = agent.generate_agent_notes(session_id, total_messages, intelligence, detection_details)
-            success = send_final_callback(session_id, total_messages, intelligence, agent_notes)
-            if success:
-                memory.mark_callback_sent(session_id)
-                callback_sent = True
-                # Save callback record to DB (was missing in simulation handler!)
-                db_service.save_callback_record(
-                    session_id=session_id,
-                    status="sent",
-                    payload_summary={
-                        "totalMessages": total_messages,
-                        "intelligenceCounts": intel_counts,
-                        "source": "simulation",
-                    },
-                    intelligence=intelligence,
-                )
-                logger.info("sim_callback_saved  session=%s", session_id[:8])
+            cb_status, cb_payload = send_final_callback(session_id, total_messages, intelligence, agent_notes)
+            memory.mark_callback_sent(session_id)
+            callback_sent = True
+            db_service.save_callback_record(
+                session_id=session_id,
+                status=cb_status,
+                payload_summary={
+                    "totalMessages": total_messages,
+                    "intelligenceCounts": intel_counts,
+                    "source": "simulation",
+                },
+                intelligence=intelligence,
+            )
+            logger.info("sim_callback_saved  session=%s  status=%s", session_id[:8], cb_status)
         
         # Save session summary to DB (was missing in simulation handler!)
         tactics_list = list(agent._get_context(session_id).get("detected_tactics", set()))

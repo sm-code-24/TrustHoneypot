@@ -203,19 +203,31 @@ class ScamDetector:
     
     # Job/loan scams
     JOB_LOAN_SCAM = {
-        "work from home": 18, "part time job": 18, "earn from home": 20,
+        "work from home": 18, "working from home": 18, "part time job": 18,
+        "earn from home": 20, "earning from home": 20,
         "typing job": 20, "data entry job": 18, "online job": 15,
+        "job opening": 18, "job opportunity": 18, "job offer": 18,
+        "earn per day": 20, "earn money": 15, "easy money": 18,
+        "per day income": 20, "daily income": 20, "monthly income": 18,
+        "5k per day": 22, "10k per day": 22, "15k per day": 22,
         "instant loan": 22, "loan approved": 22, "pre-approved loan": 22,
         "processing charges": 20, "registration fee": 22,
         "advance payment": 22, "security deposit": 20,
         "earn daily": 20, "earn weekly": 18, "guaranteed income": 25,
         "no investment": 15, "investment required": 18,
+        "simple work": 12, "easy work": 12, "online work": 15,
+        "freelance": 12, "freelancing": 12, "home based": 15,
+        "company job": 15, "company hiring": 18, "vacancy": 12,
+        "salary": 10, "income": 10, "task based": 15,
         # Hindi job/loan
         "ghar baithe kaam": 20, "ghar baithe kamaiye": 22,
+        "ghar se kaam": 20, "ghar baithe": 15,
         "naukri": 12, "naukri milegi": 18, "rozgar": 12,
+        "kamai": 12, "kamao": 12, "roz kamao": 20,
         "loan mil gaya": 22, "loan approved hai": 22,
         "advance dena hoga": 22, "registration fees do": 22,
-        "roz kamao": 20, "daily kamai": 18, "paisa hi paisa": 25,
+        "daily kamai": 18, "paisa hi paisa": 25,
+        "kaam milega": 18, "kaam hai": 12, "rozana": 12,
     }
     
     # =========================================================================
@@ -507,7 +519,15 @@ class ScamDetector:
         is_scam = total_score >= self.SCAM_THRESHOLD
         
         # Store detailed result
+        # Preserve previous scam_type if this message didn't identify one.
+        # This prevents the type from flip-flopping to "unknown" when a follow-up 
+        # message (like "click this link") doesn't independently trigger a pattern.
         inferred_type = scam_type if scam_type != "unknown" else self._infer_scam_type(categories, total_score)
+        if inferred_type == "unknown":
+            # Check if we already had a type from a previous message
+            prev_details = self.session_details.get(session_id)
+            if prev_details and prev_details.scam_type and prev_details.scam_type != "unknown":
+                inferred_type = prev_details.scam_type
         self.session_details[session_id] = DetectionResult(
             total_score=total_score,
             is_scam=is_scam,

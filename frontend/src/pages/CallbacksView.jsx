@@ -19,6 +19,7 @@ const FRAUD_COLORS = {
   "PAYMENT FRAUD": "text-red-400 bg-red-500/10 border-red-500/20",
   "KYC PHISHING": "text-amber-400 bg-amber-500/10 border-amber-500/20",
   "LOTTERY SCAM": "text-purple-400 bg-purple-500/10 border-purple-500/20",
+  "JOB SCAM": "text-orange-400 bg-orange-500/10 border-orange-500/20",
   IMPERSONATION: "text-blue-400 bg-blue-500/10 border-blue-500/20",
   "GENERIC SCAM": "text-slate-400 bg-slate-500/10 border-slate-500/20",
 };
@@ -165,6 +166,7 @@ export default function CallbacksView() {
 
   const sent = callbacks.filter((c) => c.status === "sent").length;
   const failed = callbacks.filter((c) => c.status === "failed").length;
+  const recorded = callbacks.filter((c) => c.status === "no_endpoint").length;
 
   return (
     <div className="p-4 md:p-6 space-y-6 animate-fade-in">
@@ -176,7 +178,7 @@ export default function CallbacksView() {
           Callback Reports
         </h2>
       </div>
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         <div
           className="glass rounded-xl p-4 text-center card-hover border"
           style={{ borderColor: "var(--border-primary)" }}>
@@ -197,6 +199,14 @@ export default function CallbacksView() {
             className="text-xs mt-1"
             style={{ color: "var(--text-tertiary)" }}>
             Sent
+          </div>
+        </div>
+        <div className="glass rounded-xl p-4 text-center card-hover border border-amber-500/10">
+          <div className="text-2xl font-bold text-amber-400">{recorded}</div>
+          <div
+            className="text-xs mt-1"
+            style={{ color: "var(--text-tertiary)" }}>
+            Recorded
           </div>
         </div>
         <div className="glass rounded-xl p-4 text-center card-hover border border-red-500/10">
@@ -270,10 +280,12 @@ export default function CallbacksView() {
                 const StatusIcon =
                   cb.status === "sent" ? CheckCircle
                   : cb.status === "failed" ? XCircle
+                  : cb.status === "no_endpoint" ? CheckCircle
                   : Clock;
                 const statusColor =
                   cb.status === "sent" ? "text-emerald-500"
                   : cb.status === "failed" ? "text-red-500"
+                  : cb.status === "no_endpoint" ? "text-amber-500"
                   : "";
                 return (
                   <tr
